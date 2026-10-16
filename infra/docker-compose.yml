@@ -1,0 +1,149 @@
+name: ${COMPOSE_PROJECT_NAME:-mobil-xml}
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-mobil-xml}-postgres
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-America/Santo_Domingo}
+      POSTGRES_USER: ${POSTGRES_USER:?Falta POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?Falta POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - mobil_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-mobil-xml}-redis
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-America/Santo_Domingo}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Falta REDIS_PASSWORD}
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping 2>/dev/null | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - mobil_net
+
+  mongodb:
+    image: mongo:7
+    container_name: ${COMPOSE_PROJECT_NAME:-mobil-xml}-mongodb
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-America/Santo_Domingo}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?Falta MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Falta MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-mobil_xml}
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo_data:/data/db
+      - mongo_config:/data/configdb
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping').ok\" | grep -q 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+    networks:
+      - mobil_net
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-mobil-xml}-ollama
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-America/Santo_Domingo}
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-5m}
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # Para usar GPU NVIDIA, descomenta este bloque (requiere nvidia-container-toolkit):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+    networks:
+      - mobil_net
+
+  redroid-1:
+    image: ${REDROID_IMAGE:-redroid/redroid:13.0.0-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-mobil-xml}-redroid-1
+    restart: unless-stopped
+    privileged: true
+    tty: true
+    stdin_open: true
+    command:
+      - androidboot.redroid_width=${REDROID_WIDTH:-720}
+      - androidboot.redroid_height=${REDROID_HEIGHT:-1280}
+      - androidboot.redroid_dpi=${REDROID_DPI:-320}
+      - androidboot.redroid_fps=${REDROID_FPS:-30}
+      - androidboot.redroid_gpu_mode=${REDROID_GPU_MODE:-guest}
+    ports:
+      - "${REDROID_ADB_PORT_1:-5555}:5555"
+    volumes:
+      - redroid_data_1:/data
+    networks:
+      - mobil_net
+
+  redroid-2:
+    image: ${REDROID_IMAGE:-redroid/redroid:13.0.0-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-mobil-xml}-redroid-2
+    restart: unless-stopped
+    privileged: true
+    tty: true
+    stdin_open: true
+    command:
+      - androidboot.redroid_width=${REDROID_WIDTH:-720}
+      - androidboot.redroid_height=${REDROID_HEIGHT:-1280}
+      - androidboot.redroid_dpi=${REDROID_DPI:-320}
+      - androidboot.redroid_fps=${REDROID_FPS:-30}
+      - androidboot.redroid_gpu_mode=${REDROID_GPU_MODE:-guest}
+    ports:
+      - "${REDROID_ADB_PORT_2:-5556}:5555"
+    volumes:
+      - redroid_data_2:/data
+    networks:
+      - mobil_net
+
+volumes:
+  postgres_data:
+  redis_data:
+  mongo_data:
+  mongo_config:
+  ollama_data:
+  redroid_data_1:
+  redroid_data_2:
+
+networks:
+  mobil_net:
+    driver: bridge
