@@ -1,18 +1,44 @@
+# ============================================================================
+# mobil-xml / infra - docker-compose
+#
+# Modelo de red (nada queda expuesto salvo la API, y solo en loopback):
+#
+#   edge_net    API <-> Internet (salida hacia graph.facebook.com) + puerto publicado
+#   data_net    INTERNAL (sin salida a Internet): redis, postgres, mongodb, api, orchestrator
+#   llm_net     ollama <-> orchestrator
+#   device_net  orchestrator <-> redroid-1/2 (ADB solo dentro de esta red)
+#
+# Postgres, MongoDB, Redis, Ollama y ADB NO publican puertos al host.
+# Para administrarlos: `docker compose exec <servicio> ...`
+# ============================================================================
 name: ${COMPOSE_PROJECT_NAME:-mobil-xml}
+
+x-hardening: &hardening
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
 
 services:
 
+  # --------------------------------------------------------------------------
+  # Datos
+  # --------------------------------------------------------------------------
   postgres:
-    image: postgres:16-alpine
+    <<: [*hardening, *logging]
+    image: ${POSTGRES_IMAGE:-postgres:16.4-alpine}
     container_name: ${COMPOSE_PROJECT_NAME:-mobil-xml}-postgres
-    restart: unless-stopped
     environment:
       TZ: ${TZ:-America/Santo_Domingo}
       POSTGRES_USER: ${POSTGRES_USER:?Falta POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:?Falta POSTGRES_DB}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,40 +46,41 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    networks:
-      - mobil_net
+    mem_limit: ${POSTGRES_MEM_LIMIT:-1g}
+    networks: [data_net]
 
   redis:
-    image: redis:7-alpine
+    <<: [*hardening, *logging]
+    image: ${REDIS_IMAGE:-redis:7.4-alpine}
     container_name: ${COMPOSE_PROJECT_NAME:-mobil-xml}-redis
-    restart: unless-stopped
     environment:
       TZ: ${TZ:-America/Santo_Domingo}
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Falta REDIS_PASSWORD}
-    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes"]
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+      REDIS_MAXMEMORY: ${REDIS_MAXMEMORY:-256mb}
+    # noeviction: la cola de tareas nunca debe perder elementos por presion de memoria.
+    command:
+      - sh
+      - -c
+      - exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes --maxmemory "$$REDIS_MAXMEMORY" --maxmemory-policy noeviction
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping 2>/dev/null | grep -q PONG"]
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping 2>/dev/null | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 10
-    networks:
-      - mobil_net
+    mem_limit: ${REDIS_MEM_LIMIT:-512m}
+    networks: [data_net]
 
   mongodb:
-    image: mongo:7
+    <<: [*hardening, *logging]
+    image: ${MONGO_IMAGE:-mongo:7.0.14}
     container_name: ${COMPOSE_PROJECT_NAME:-mobil-xml}-mongodb
-    restart: unless-stopped
     environment:
       TZ: ${TZ:-America/Santo_Domingo}
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?Falta MONGO_ROOT_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Falta MONGO_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGO_DB:-mobil_xml}
-    ports:
-      - "${MONGO_PORT:-27017}:27017"
     volumes:
       - mongo_data:/data/db
       - mongo_config:/data/configdb
@@ -63,19 +90,20 @@ services:
       timeout: 10s
       retries: 10
       start_period: 20s
-    networks:
-      - mobil_net
+    mem_limit: ${MONGO_MEM_LIMIT:-1g}
+    networks: [data_net]
 
+  # --------------------------------------------------------------------------
+  # LLM local
+  # --------------------------------------------------------------------------
   ollama:
-    image: ollama/ollama:latest
+    <<: [*hardening, *logging]
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.3.12}
     container_name: ${COMPOSE_PROJECT_NAME:-mobil-xml}-ollama
-    restart: unless-stopped
     environment:
       TZ: ${TZ:-America/Santo_Domingo}
       OLLAMA_HOST: 0.0.0.0:11434
       OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-5m}
-    ports:
-      - "${OLLAMA_PORT:-11434}:11434"
     volumes:
       - ollama_data:/root/.ollama
     # Para usar GPU NVIDIA, descomenta este bloque (requiere nvidia-container-toolkit):
@@ -92,13 +120,18 @@ services:
       timeout: 10s
       retries: 10
       start_period: 15s
-    networks:
-      - mobil_net
+    mem_limit: ${OLLAMA_MEM_LIMIT:-8g}
+    networks: [llm_net]
 
+  # --------------------------------------------------------------------------
+  # Nodos Android (Redroid). Requieren privileged; por eso viven aislados en
+  # device_net y su puerto ADB nunca se publica al host.
+  # --------------------------------------------------------------------------
   redroid-1:
+    <<: *logging
+    restart: unless-stopped
     image: ${REDROID_IMAGE:-redroid/redroid:13.0.0-latest}
     container_name: ${COMPOSE_PROJECT_NAME:-mobil-xml}-redroid-1
-    restart: unless-stopped
     privileged: true
     tty: true
     stdin_open: true
@@ -108,17 +141,23 @@ services:
       - androidboot.redroid_dpi=${REDROID_DPI:-320}
       - androidboot.redroid_fps=${REDROID_FPS:-30}
       - androidboot.redroid_gpu_mode=${REDROID_GPU_MODE:-guest}
-    ports:
-      - "${REDROID_ADB_PORT_1:-5555}:5555"
     volumes:
       - redroid_data_1:/data
-    networks:
-      - mobil_net
+    healthcheck:
+      test: ["CMD-SHELL", "getprop sys.boot_completed | grep -q 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+    mem_limit: ${REDROID_MEM_LIMIT:-3g}
+    cpus: ${REDROID_CPUS:-2}
+    networks: [device_net]
 
   redroid-2:
+    <<: *logging
+    restart: unless-stopped
     image: ${REDROID_IMAGE:-redroid/redroid:13.0.0-latest}
     container_name: ${COMPOSE_PROJECT_NAME:-mobil-xml}-redroid-2
-    restart: unless-stopped
     privileged: true
     tty: true
     stdin_open: true
@@ -128,12 +167,100 @@ services:
       - androidboot.redroid_dpi=${REDROID_DPI:-320}
       - androidboot.redroid_fps=${REDROID_FPS:-30}
       - androidboot.redroid_gpu_mode=${REDROID_GPU_MODE:-guest}
-    ports:
-      - "${REDROID_ADB_PORT_2:-5556}:5555"
     volumes:
       - redroid_data_2:/data
-    networks:
-      - mobil_net
+    healthcheck:
+      test: ["CMD-SHELL", "getprop sys.boot_completed | grep -q 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+    mem_limit: ${REDROID_MEM_LIMIT:-3g}
+    cpus: ${REDROID_CPUS:-2}
+    networks: [device_net]
+
+  # --------------------------------------------------------------------------
+  # Aplicacion
+  # --------------------------------------------------------------------------
+  api:
+    <<: [*hardening, *logging]
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+    image: ${COMPOSE_PROJECT_NAME:-mobil-xml}-api:local
+    container_name: ${COMPOSE_PROJECT_NAME:-mobil-xml}-api
+    environment:
+      TZ: ${TZ:-America/Santo_Domingo}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      API_KEY: ${API_KEY:?Falta API_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
+      WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      SEND_RATE_PER_MINUTE: ${SEND_RATE_PER_MINUTE:-30}
+      SEND_RATE_PER_RECIPIENT_HOUR: ${SEND_RATE_PER_RECIPIENT_HOUR:-10}
+    # Unico puerto publicado: solo loopback. Expon la API al exterior con un
+    # proxy inverso con TLS (Caddy/Nginx) en el host, no cambiando este bind.
+    ports:
+      - "${API_BIND:-127.0.0.1}:${API_PORT:-8000}:8000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    mem_limit: ${API_MEM_LIMIT:-512m}
+    networks: [edge_net, data_net]
+
+  orchestrator:
+    <<: [*hardening, *logging]
+    build:
+      context: ..
+      dockerfile: core/Dockerfile
+    image: ${COMPOSE_PROJECT_NAME:-mobil-xml}-orchestrator:local
+    container_name: ${COMPOSE_PROJECT_NAME:-mobil-xml}-orchestrator
+    init: true
+    stop_grace_period: 45s
+    environment:
+      TZ: ${TZ:-America/Santo_Domingo}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      INSTANCE_ID: orchestrator-1
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
+      ADB_TARGETS: ${ADB_TARGETS:-redroid-1:5555,redroid-2:5555}
+      ALLOWED_DEVICES: ${ALLOWED_DEVICES:-redroid-1:5555,redroid-2:5555}
+      WORKERS: ${WORKERS:-4}
+      SHUTDOWN_GRACE: "30"
+    cap_drop: [ALL]
+    depends_on:
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+      redroid-1:
+        condition: service_started
+      redroid-2:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime('/tmp/orchestrator.alive') < 60 else 1)"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    mem_limit: ${ORCH_MEM_LIMIT:-512m}
+    networks: [data_net, llm_net, device_net]
 
 volumes:
   postgres_data:
@@ -145,5 +272,12 @@ volumes:
   redroid_data_2:
 
 networks:
-  mobil_net:
+  edge_net:
+    driver: bridge
+  data_net:
+    driver: bridge
+    internal: true   # sin salida a Internet ni acceso desde fuera
+  llm_net:
+    driver: bridge
+  device_net:
     driver: bridge

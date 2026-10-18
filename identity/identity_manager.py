@@ -7,6 +7,15 @@ mixtos (smartphones y tablets) para pruebas, QA y datos de demostración.
 - Los correos usan dominios reservados (.test) para que nunca sean reales.
 - Los perfiles de dispositivo son descriptores de catálogo (modelo, pantalla,
   SO, user-agent), útiles para pruebas responsive y de compatibilidad.
+
+Notas de integridad de datos:
+- Los identificadores, usernames y correos son únicos dentro del almacén, incluso
+  con ``seed`` fijo y un archivo existente (no se sobrescriben identidades).
+- ``reference_date`` permite generar fechas de nacimiento reproducibles.
+- El guardado es atómico (archivo temporal + rename) y con permisos 600.
+- El "fingerprint" es un hash del PERFIL de dispositivo (modelo/SO/pantalla/idioma),
+  no un identificador único por identidad: identidades con el mismo perfil
+  comparten fingerprint.
 """
 
 from __future__ import annotations
@@ -14,11 +23,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import random
 import re
+import tempfile
 import unicodedata
 import uuid
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Iterable, Optional
@@ -26,6 +37,7 @@ from typing import Iterable, Optional
 from faker import Faker
 
 CHROME_VERSION = "124.0.0.0"
+MAX_UNIQUE_RETRIES = 100
 
 # ---------------------------------------------------------------------------
 # Catálogo de dispositivos
@@ -81,7 +93,7 @@ class DeviceProfile:
 
     def compute_fingerprint(self) -> str:
         """Hash estable (SHA-256) de los atributos del perfil, útil como
-        clave de inventario/deduplicación."""
+        clave de inventario/deduplicación por PERFIL (no por identidad)."""
         base = "|".join(
             str(x)
             for x in (
@@ -119,9 +131,12 @@ class SyntheticIdentity:
 
     @classmethod
     def from_dict(cls, data: dict) -> "SyntheticIdentity":
-        dev = DeviceProfile(**data["device"])
-        payload = {**data, "device": dev}
-        return cls(**payload)
+        """Tolerante a campos desconocidos (versiones futuras del esquema)."""
+        dev_fields = {f.name for f in fields(DeviceProfile)}
+        top_fields = {f.name for f in fields(cls)}
+        dev = DeviceProfile(**{k: v for k, v in data["device"].items() if k in dev_fields})
+        payload = {k: v for k, v in data.items() if k in top_fields and k != "device"}
+        return cls(**payload, device=dev)
 
 
 # ---------------------------------------------------------------------------
@@ -159,12 +174,16 @@ class IdentityManager:
     """Genera, almacena y consulta identidades sintéticas con su dispositivo."""
 
     def __init__(self, storage_path: str | Path = "identity/identities.json",
-                 seed: Optional[int] = None):
+                 seed: Optional[int] = None,
+                 reference_date: Optional[date] = None):
         self.storage_path = Path(storage_path)
         self._rng = random.Random(seed)
         self._seed = seed
+        self._today = reference_date or date.today()
         self._fakers: dict[str, Faker] = {}
         self._identities: dict[str, SyntheticIdentity] = {}
+        self._usernames: set[str] = set()
+        self._emails: set[str] = set()
         if self.storage_path.exists():
             self.load()
 
@@ -178,7 +197,24 @@ class IdentityManager:
         return self._fakers[locale]
 
     def _new_id(self) -> str:
-        return str(uuid.UUID(int=self._rng.getrandbits(128), version=4))
+        """UUID v4 derivado del RNG (reproducible con seed) que no colisiona con los existentes."""
+        for _ in range(MAX_UNIQUE_RETRIES):
+            candidate = str(uuid.UUID(int=self._rng.getrandbits(128), version=4))
+            if candidate not in self._identities:
+                return candidate
+        raise RuntimeError("No se pudo generar un identificador único")
+
+    def _unique_handle(self, slug: str) -> tuple[str, str]:
+        """Devuelve (username, email) que no existan ya en el almacén."""
+        for attempt in range(MAX_UNIQUE_RETRIES):
+            # El rango crece si hay muchos intentos fallidos (alta densidad de colisiones).
+            upper = 9999 if attempt < 20 else 999_999
+            suffix = self._rng.randint(10, upper)
+            username = f"{slug.replace('.', '_')}{suffix}"
+            email = f"{slug}{suffix}@example.test"  # dominio reservado (RFC 2606)
+            if username not in self._usernames and email not in self._emails:
+                return username, email
+        raise RuntimeError("No se pudo generar un usuario/correo único")
 
     def generate_device(self, form_factor: Optional[str] = None,
                         language: str = "es-ES",
@@ -212,31 +248,39 @@ class IdentityManager:
 
         first, last = fake.first_name(), fake.last_name()
         slug = f"{_slugify(first)}.{_slugify(last)}"
-        suffix = self._rng.randint(10, 9999)
+        if slug in (".", ""):
+            slug = "user"
+        username, email = self._unique_handle(slug)
 
-        today = date.today()
         age_days = self._rng.randint(18 * 365, 60 * 365)
-        birthdate = today - timedelta(days=age_days)
+        birthdate = self._today - timedelta(days=age_days)
 
         identity = SyntheticIdentity(
             identity_id=self._new_id(),
             full_name=f"{first} {last}",
             first_name=first,
             last_name=last,
-            username=f"{slug.replace('.', '_')}{suffix}",
-            email=f"{slug}{suffix}@example.test",  # dominio reservado (RFC 2606)
+            username=username,
+            email=email,
             birthdate=birthdate.isoformat(),
             country=country,
             city=fake.city(),
             locale=lang,
             device=self.generate_device(form_factor, lang, tz),
         )
-        self._identities[identity.identity_id] = identity
+        self._register(identity)
         return identity
+
+    def _register(self, identity: SyntheticIdentity) -> None:
+        self._identities[identity.identity_id] = identity
+        self._usernames.add(identity.username)
+        self._emails.add(identity.email)
 
     def generate_batch(self, count: int, tablet_ratio: float = 0.3
                        ) -> list[SyntheticIdentity]:
         """Genera `count` identidades con mezcla smartphone/tablet."""
+        if count < 0:
+            raise ValueError("count no puede ser negativo")
         if not 0.0 <= tablet_ratio <= 1.0:
             raise ValueError("tablet_ratio debe estar entre 0 y 1")
         n_tablets = round(count * tablet_ratio)
@@ -253,10 +297,15 @@ class IdentityManager:
         items: Iterable[SyntheticIdentity] = self._identities.values()
         if form_factor:
             items = (i for i in items if i.device.form_factor == form_factor)
-        return list(items)
+        return [*items]
 
     def remove(self, identity_id: str) -> bool:
-        return self._identities.pop(identity_id, None) is not None
+        identity = self._identities.pop(identity_id, None)
+        if identity is None:
+            return False
+        self._usernames.discard(identity.username)
+        self._emails.discard(identity.email)
+        return True
 
     def stats(self) -> dict:
         items = self.list()
@@ -264,23 +313,50 @@ class IdentityManager:
             "total": len(items),
             "smartphones": sum(i.device.form_factor == "smartphone" for i in items),
             "tablets": sum(i.device.form_factor == "tablet" for i in items),
-            "unique_fingerprints": len({i.device.fingerprint for i in items}),
+            # Perfiles de dispositivo distintos (modelo/SO/pantalla/idioma/zona), no identidades.
+            "distinct_device_profiles": len({i.device.fingerprint for i in items}),
         }
 
     # -- persistencia -------------------------------------------------------
     def save(self) -> Path:
+        """Escritura atómica: un corte a mitad no corrompe el archivo existente."""
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
         data = [i.to_dict() for i in self._identities.values()]
-        self.storage_path.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+        payload = json.dumps(data, ensure_ascii=False, indent=2)
+        fd, tmp_name = tempfile.mkstemp(
+            dir=self.storage_path.parent, prefix=self.storage_path.name, suffix=".tmp"
         )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(payload)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.chmod(tmp_name, 0o600)
+            os.replace(tmp_name, self.storage_path)
+        except BaseException:
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                pass
+            raise
         return self.storage_path
 
     def load(self) -> None:
-        raw = json.loads(self.storage_path.read_text(encoding="utf-8"))
-        self._identities = {
-            d["identity_id"]: SyntheticIdentity.from_dict(d) for d in raw
-        }
+        try:
+            raw = json.loads(self.storage_path.read_text(encoding="utf-8"))
+            if not isinstance(raw, list):
+                raise ValueError("se esperaba una lista de identidades")
+            identities = [SyntheticIdentity.from_dict(d) for d in raw]
+        except (json.JSONDecodeError, ValueError, KeyError, TypeError) as exc:
+            raise ValueError(
+                f"Archivo de identidades corrupto o con formato inválido "
+                f"({self.storage_path}): {exc}"
+            ) from exc
+        self._identities = {}
+        self._usernames = set()
+        self._emails = set()
+        for identity in identities:
+            self._register(identity)
 
 
 # ---------------------------------------------------------------------------
