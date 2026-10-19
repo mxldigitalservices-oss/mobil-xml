@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mobil-xml · Panel de Control</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream:   '#FDFBF7',
+            amber:   { DEFAULT: '#D97706', soft: '#FEF3C7' },
+            emerald: { DEFAULT: '#059669', soft: '#D1FAE5' },
+            coral:   { DEFAULT: '#DC2626', soft: '#FEE2E2' },
+            ink:     '#1F2937',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          boxShadow: {
+            card: '0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.06)',
+            lift: '0 10px 25px -10px rgb(0 0 0 / 0.15)',
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/custom.css" />
+</head>
+<body class="bg-cream text-ink font-sans antialiased min-h-screen">
+
+  <!-- Header / Dashboard global -->
+  <header class="sticky top-0 z-30 bg-cream/90 backdrop-blur border-b border-amber-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center gap-3 justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-amber flex items-center justify-center text-white font-bold">m</div>
+        <div>
+          <h1 class="text-lg font-semibold leading-tight">mobil-xml</h1>
+          <p class="text-xs text-gray-500">Panel de control</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3" id="global-stats">
+        <span id="api-status" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-soft text-emerald">
+          <span class="w-2 h-2 rounded-full bg-emerald animate-pulse"></span>
+          API Online
+        </span>
+        <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-amber-100 shadow-card">
+          <span class="text-gray-500">Clones activos</span>
+          <strong id="stat-active" class="text-amber">0</strong>
+        </span>
+        <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-amber-100 shadow-card">
+          <span class="text-gray-500">En cola</span>
+          <strong id="stat-queue" class="text-amber">0</strong>
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Sección clones -->
+    <section id="clones-panel" class="bg-white rounded-xl shadow-card border border-amber-100 p-4 sm:p-6">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-base font-semibold">Control de clones en lote</h2>
+          <p class="text-xs text-gray-500">Selecciona dispositivos y lanza operaciones humanizadas.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-refresh" class="text-xs px-3 py-1.5 rounded-lg border border-amber-100 bg-white hover:bg-amber-soft transition">Actualizar</button>
+        </div>
+      </div>
+
+      <!-- Lista de clones -->
+      <div id="clones-list" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
+        <!-- inyectado por JS -->
+      </div>
+
+      <!-- Config del lote -->
+      <div class="grid md:grid-cols-3 gap-3 p-3 rounded-xl bg-cream border border-amber-100">
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="text-gray-600 text-xs font-medium">Tipo de medio</span>
+          <select id="select-media" class="rounded-lg border border-amber-100 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber/30">
+            <option value="video">Video</option>
+            <option value="audio">Audio</option>
+          </select>
+        </label>
+
+        <label class="flex flex-col gap-1 text-sm">
+          <span class="text-gray-600 text-xs font-medium">Acción</span>
+          <select id="select-action" class="rounded-lg border border-amber-100 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber/30">
+            <option value="sleep">Permanencia orgánica</option>
+            <option value="tap">Tap</option>
+            <option value="swipe">Swipe</option>
+          </select>
+        </label>
+
+        <label class="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white border border-amber-100">
+          <span class="text-sm">
+            <span class="block font-medium">Humanización</span>
+            <span class="text-xs text-gray-500">Retardos gaussianos + Bézier</span>
+          </span>
+          <input id="toggle-humanize" type="checkbox" checked class="peer sr-only" />
+          <span class="relative w-10 h-5 rounded-full bg-gray-200 peer-checked:bg-amber transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-5"></span>
+        </label>
+      </div>
+
+      <!-- Acciones del lote -->
+      <div class="mt-4 flex flex-col sm:flex-row gap-3">
+        <button id="btn-start-batch"
+          class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-amber text-white font-semibold shadow-sm hover:shadow-md hover:bg-amber-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+          ▶ Iniciar lote
+        </button>
+        <button id="btn-emergency"
+          class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-coral text-white font-semibold shadow-sm hover:shadow-md hover:bg-red-700 transition">
+          ■ Parada de emergencia
+        </button>
+      </div>
+    </section>
+
+    <!-- Sección targets -->
+    <section id="targets-panel" class="bg-white rounded-xl shadow-card border border-amber-100 p-4 sm:p-6">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-base font-semibold">Objetivos (Targets)</h2>
+          <p class="text-xs text-gray-500">URLs de reproducción e interacción.</p>
+        </div>
+        <span id="targets-count" class="text-xs text-gray-500">0 registros</span>
+      </div>
+
+      <!-- Form -->
+      <form id="target-form" class="grid md:grid-cols-[1fr_180px_1fr_auto] gap-2 mb-4">
+        <input required name="url" type="url" placeholder="https://…"
+          class="rounded-lg border border-amber-100 bg-cream px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber/30" />
+        <select name="category" class="rounded-lg border border-amber-100 bg-cream px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber/30">
+          <option value="VIDEO">VIDEO</option>
+          <option value="AUDIO_STREAM">AUDIO_STREAM</option>
+          <option value="SOCIAL_PROFILE">SOCIAL_PROFILE</option>
+          <option value="PLAYLIST">PLAYLIST</option>
+        </select>
+        <input name="label" type="text" placeholder="Etiqueta (opcional)"
+          class="rounded-lg border border-amber-100 bg-cream px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber/30" />
+        <button type="submit" class="px-4 py-2 rounded-lg bg-emerald text-white text-sm font-medium hover:bg-emerald-700 transition">Agregar</button>
+      </form>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-amber-100">
+            <tr>
+              <th class="py-2 pr-3">URL</th>
+              <th class="py-2 pr-3">Categoría</th>
+              <th class="py-2 pr-3">Etiqueta</th>
+              <th class="py-2 pr-3 text-right">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="targets-body" class="divide-y divide-amber-50">
+            <!-- inyectado por JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Sección logs -->
+    <section id="logs-panel" class="bg-white rounded-xl shadow-card border border-amber-100 p-4 sm:p-6">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h2 class="text-base font-semibold">Registros de actividad</h2>
+          <p class="text-xs text-gray-500">Eventos recientes (MongoDB).</p>
+        </div>
+        <button id="btn-clear-logs" class="text-xs px-3 py-1.5 rounded-lg border border-amber-100 bg-white hover:bg-amber-soft transition">Limpiar</button>
+      </div>
+      <div id="logs-console"
+        class="font-mono text-xs sm:text-[13px] bg-ink text-gray-100 rounded-xl p-4 h-64 overflow-y-auto space-y-1 leading-relaxed">
+        <div class="text-gray-400">[sistema] Esperando eventos…</div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toasts -->
+  <div id="toasts" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 items-end"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
