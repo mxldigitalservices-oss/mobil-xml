@@ -1,7 +1,6 @@
 import random
 import time
 
-# Lista de User-Agents de aplicaciones móviles reales y navegadores móviles legítimos
 MOBILE_USER_AGENTS = [
     "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
     "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.55 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
@@ -12,7 +11,6 @@ MOBILE_USER_AGENTS = [
 class APIObfuscator:
     @staticmethod
     def obtener_headers_aleatorios() -> dict:
-        """Genera cabeceras HTTP que imitan un dispositivo real para evadir bloqueos de API."""
         ua = random.choice(MOBILE_USER_AGENTS)
         return {
             "User-Agent": ua,
@@ -29,6 +27,5 @@ class APIObfuscator:
 
     @staticmethod
     def aplicar_pausa_humana(min_segundos: float = 1.5, max_segundos: float = 4.5):
-        """Introduce una pausa gaussiana/aleatoria para romper patrones de tiempo en las peticiones."""
         retardo = random.uniform(min_segundos, max_segundos)
         time.sleep(retardo)
