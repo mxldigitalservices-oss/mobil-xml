@@ -19,3 +19,4 @@ identity/*.tmp
 .DS_Store
 .idea/
 .vscode/
+.env
