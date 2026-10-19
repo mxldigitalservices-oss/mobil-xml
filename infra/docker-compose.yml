@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mobil_postgres
+    environment:
+      POSTGRES_DB: mobil_db
+      POSTGRES_USER: mobil_user
+      POSTGRES_PASSWORD: mobil_password
+    ports:
+      - "5432:5432"
+    networks:
+      - mobil_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: mobil_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - mobil_net
+
+  api:
+    build: .
+    container_name: mobil_api
+    command: uvicorn api.main_api:app --host 0.0.0.0 --port 8000
+    environment:
+      REDIS_HOST: redis
+      DATABASE_URL: postgresql+asyncpg://mobil_user:mobil_password@postgres:5432/mobil_db
+    depends_on:
+      - redis
+      - postgres
+    ports:
+      - "8000:8000"
+    networks:
+      - mobil_net
+
+networks:
+  mobil_net:
+    driver: bridge
