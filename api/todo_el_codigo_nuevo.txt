@@ -1,0 +1,2785 @@
+=== INICIO DEL VOLCADO DE CONTENIDO DEL REPOSITORIO ===
+
+============================================================
+ARCHIVO: ./.env
+============================================================
+
+POSTGRES_USER=mobil_user
+POSTGRES_PASSWORD=mobil_pass
+POSTGRES_DB=mobil_db
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5433
+
+DATABASE_URL=postgresql+asyncpg://mobil_user:mobil_pass@localhost:5433/mobil_db
+REDIS_URL=redis://localhost:6379/0
+
+
+============================================================
+ARCHIVO: ./docker-compose.yml
+============================================================
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mobil_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: mobil_user
+      POSTGRES_PASSWORD: mobil_pass
+      POSTGRES_DB: mobil_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:alpine
+    container_name: mobil_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
+
+
+============================================================
+ARCHIVO: ./requirements.txt
+============================================================
+
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+redis==5.1.1
+sqlalchemy[asyncio]==2.0.35
+asyncpg==0.30.0
+faker==30.3.0
+pytest==8.3.3
+pytest-asyncio==0.24.0
+fakeredis[aioredis]==2.25.1
+httpx==0.27.2
+
+
+============================================================
+ARCHIVO: ./pytest.ini
+============================================================
+
+[pytest]
+asyncio_mode = auto
+testpaths = tests
+
+
+
+============================================================
+ARCHIVO: ./dump_repo.py
+============================================================
+
+import os
+
+EXCLUDE_DIRS = {'.git', 'node_modules', '__pycache__', 'venv', 'env', 'dist', 'build'}
+EXCLUDE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip', '.exe', '.lock'}
+
+def dump_repository(start_path='.'):
+    print("=== INICIO DEL VOLCADO DE CONTENIDO DEL REPOSITORIO ===")
+    for root, dirs, files in os.walk(start_path):
+        dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
+        for file in files:
+            ext = os.path.splitext(file)[1].lower()
+            if ext in EXCLUDE_EXTENSIONS:
+                continue
+            file_path = os.path.join(root, file)
+            print(f"\n{'='*60}")
+            print(f"ARCHIVO: {file_path}")
+            print(f"{'='*60}\n")
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    print(f.read())
+            except Exception as e:
+                print(f"[No se pudo leer el archivo: {e}]")
+
+if __name__ == "__main__":
+    dump_repository()
+
+
+============================================================
+ARCHIVO: ./todo_el_codigo.txt
+============================================================
+
+=== INICIO DEL VOLCADO DE CONTENIDO DEL REPOSITORIO ===
+
+============================================================
+ARCHIVO: ./.env
+============================================================
+
+POSTGRES_USER=mobil_user
+POSTGRES_PASSWORD=mobil_pass
+POSTGRES_DB=mobil_db
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5433
+
+DATABASE_URL=postgresql+asyncpg://mobil_user:mobil_pass@localhost:5433/mobil_db
+REDIS_URL=redis://localhost:6379/0
+
+
+============================================================
+ARCHIVO: ./docker-compose.yml
+============================================================
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mobil_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: mobil_user
+      POSTGRES_PASSWORD: mobil_pass
+      POSTGRES_DB: mobil_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:alpine
+    container_name: mobil_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
+
+
+============================================================
+ARCHIVO: ./requirements.txt
+============================================================
+
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+redis==5.1.1
+sqlalchemy[asyncio]==2.0.35
+asyncpg==0.30.0
+faker==30.3.0
+pytest==8.3.3
+pytest-asyncio==0.24.0
+fakeredis[aioredis]==2.25.1
+httpx==0.27.2
+
+
+============================================================
+ARCHIVO: ./pytest.ini
+============================================================
+
+[pytest]
+asyncio_mode = auto
+testpaths = tests
+
+
+
+============================================================
+ARCHIVO: ./dump_repo.py
+============================================================
+
+import os
+
+EXCLUDE_DIRS = {'.git', 'node_modules', '__pycache__', 'venv', 'env', 'dist', 'build'}
+EXCLUDE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip', '.exe', '.lock'}
+
+def dump_repository(start_path='.'):
+    print("=== INICIO DEL VOLCADO DE CONTENIDO DEL REPOSITORIO ===")
+    for root, dirs, files in os.walk(start_path):
+        dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
+        for file in files:
+            ext = os.path.splitext(file)[1].lower()
+            if ext in EXCLUDE_EXTENSIONS:
+                continue
+            file_path = os.path.join(root, file)
+            print(f"\n{'='*60}")
+            print(f"ARCHIVO: {file_path}")
+            print(f"{'='*60}\n")
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    print(f.read())
+            except Exception as e:
+                print(f"[No se pudo leer el archivo: {e}]")
+
+if __name__ == "__main__":
+    dump_repository()
+
+
+============================================================
+ARCHIVO: ./todo_el_codigo.txt
+============================================================
+
+
+
+============================================================
+ARCHIVO: ./api/main_api.py
+============================================================
+
+from __future__ import annotations
+import json
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, HTTPException, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from api.schemas import TaskRequest, TargetCreate
+from api.routers.clones import router as clones_router
+from identity.target_manager import TargetManager, TargetCategory
+from infra.database import get_session
+from infra.redis_client import get_redis
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Asegura schema de targets (en prod: Alembic)
+    from infra.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as session:
+        await TargetManager(session).init_schema()
+    yield
+
+
+app = FastAPI(title="mobil-xml API", version="0.2.0", lifespan=lifespan)
+app.include_router(clones_router)
+
+QUEUE_NAME = "task_queue"  # legacy; los clones usan tasks:<id>
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
+
+@app.post("/tasks", status_code=201)
+async def enqueue_task(task: TaskRequest):
+    try:
+        r = get_redis()
+        await r.lpush(QUEUE_NAME, json.dumps(task.model_dump()))
+        return {"status": "queued", "task": task.model_dump()}
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/targets", status_code=201)
+async def create_target(
+    body: TargetCreate, session: AsyncSession = Depends(get_session)
+):
+    tm = TargetManager(session)
+    target = await tm.add_target(body.url, TargetCategory(body.category), body.label)
+    return {"id": target.id, "url": target.url, "category": target.category.value}
+
+
+@app.get("/api/v1/targets")
+async def list_targets(
+    category: str, session: AsyncSession = Depends(get_session)
+):
+    tm = TargetManager(session)
+    try:
+        cat = TargetCategory(category)
+    except ValueError as exc:
+        raise HTTPException(400, f"categoría inválida: {category}") from exc
+    rows = await tm.get_by_category(cat)
+    return [{"id": t.id, "url": t.url, "label": t.label} for t in rows]
+
+
+============================================================
+ARCHIVO: ./api/schemas.py
+============================================================
+
+from __future__ import annotations
+from typing import Literal
+from pydantic import BaseModel, Field
+
+
+class TaskRequest(BaseModel):
+    device_id: str
+    action: str
+    payload: dict = Field(default_factory=dict)
+    humanize: bool = True
+    media_type: Literal["audio", "video"] = "video"
+
+
+class BatchStartRequest(BaseModel):
+    clone_ids: list[str]
+    humanize: bool = True
+    media_type: Literal["audio", "video"] = "video"
+    action: str = "sleep"
+    payload: dict = Field(default_factory=dict)
+
+
+class EmergencyStopRequest(BaseModel):
+    reason: str = "manual_emergency"
+    clone_ids: list[str] | None = None  # None = todos
+
+
+class TargetCreate(BaseModel):
+    url: str
+    category: Literal["VIDEO", "AUDIO_STREAM", "SOCIAL_PROFILE", "PLAYLIST"]
+    label: str | None = None
+
+
+============================================================
+ARCHIVO: ./api/routers/clones.py
+============================================================
+
+from __future__ import annotations
+import json
+from fastapi import APIRouter
+
+from api.schemas import BatchStartRequest, EmergencyStopRequest
+from infra.redis_client import get_redis
+
+router = APIRouter(prefix="/api/v1/clones", tags=["clones"])
+
+
+@router.post("/batch-start")
+async def batch_start(req: BatchStartRequest):
+    r = get_redis()
+    queued = 0
+    for clone_id in req.clone_ids:
+        task = {
+            "task_id": f"{clone_id}:{queued}",
+            "device_id": clone_id,
+            "action": req.action,
+            "payload": req.payload,
+            "humanize": req.humanize,
+            "media_type": req.media_type,
+            "retries": 0,
+            "resume_at": None,
+        }
+        await r.lpush(f"tasks:{clone_id}", json.dumps(task))
+        queued += 1
+    return {"queued": queued, "humanize": req.humanize, "media_type": req.media_type}
+
+
+@router.post("/emergency-stop")
+async def emergency_stop(req: EmergencyStopRequest):
+    r = get_redis()
+    targets = req.clone_ids or await r.smembers("active_clones")
+    for clone_id in targets:
+        await r.set(f"stop:{clone_id}", req.reason)
+    return {"stopped": list(targets), "reason": req.reason}
+
+
+============================================================
+ARCHIVO: ./infra/database.py
+============================================================
+
+import os
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+asyncpg://mobil_user:mobil_pass@localhost:5432/mobil_db",
+)
+
+engine = create_async_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+async def get_session() -> AsyncSession:
+    async with AsyncSessionLocal() as session:
+        yield session
+
+
+============================================================
+ARCHIVO: ./infra/redis_client.py
+============================================================
+
+import os
+import redis.asyncio as aioredis
+
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+
+_redis: aioredis.Redis | None = None
+
+
+def get_redis() -> aioredis.Redis:
+    global _redis
+    if _redis is None:
+        _redis = aioredis.Redis(
+            host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True
+        )
+    return _redis
+
+
+============================================================
+ARCHIVO: ./infra/docker-compose.yml
+============================================================
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mobil_postgres
+    environment:
+      POSTGRES_DB: mobil_db
+      POSTGRES_USER: mobil_user
+      POSTGRES_PASSWORD: mobil_password
+    ports:
+      - "5432:5432"
+    networks:
+      - mobil_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: mobil_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - mobil_net
+
+  api:
+    build: .
+    container_name: mobil_api
+    command: uvicorn api.main_api:app --host 0.0.0.0 --port 8000
+    environment:
+      REDIS_HOST: redis
+      DATABASE_URL: postgresql+asyncpg://mobil_user:mobil_password@postgres:5432/mobil_db
+    depends_on:
+      - redis
+      - postgres
+    ports:
+      - "8000:8000"
+    networks:
+      - mobil_net
+
+networks:
+  mobil_net:
+    driver: bridge
+
+
+============================================================
+ARCHIVO: ./identity/target_manager.py
+============================================================
+
+from __future__ import annotations
+import enum
+from sqlalchemy import String, Enum, select, Boolean
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class TargetCategory(str, enum.Enum):
+    VIDEO = "VIDEO"
+    AUDIO_STREAM = "AUDIO_STREAM"
+    SOCIAL_PROFILE = "SOCIAL_PROFILE"
+    PLAYLIST = "PLAYLIST"
+
+
+class Target(Base):
+    __tablename__ = "targets"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    url: Mapped[str] = mapped_column(String(2048), unique=True, index=True)
+    category: Mapped[TargetCategory] = mapped_column(Enum(TargetCategory), index=True)
+    label: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class TargetManager:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def init_schema(self) -> None:
+        async with self.session.bind.begin() as conn:  # type: ignore[union-attr]
+            await conn.run_sync(Base.metadata.create_all)
+
+    async def add_target(
+        self, url: str, category: TargetCategory, label: str | None = None
+    ) -> Target:
+        target = Target(url=url, category=category, label=label)
+        self.session.add(target)
+        await self.session.commit()
+        await self.session.refresh(target)
+        return target
+
+    async def get_by_category(self, category: TargetCategory) -> list[Target]:
+        result = await self.session.execute(
+            select(Target).where(Target.category == category, Target.active.is_(True))
+        )
+        return list(result.scalars().all())
+
+    async def deactivate(self, target_id: int) -> bool:
+        target = await self.session.get(Target, target_id)
+        if not target:
+            return False
+        target.active = False
+        await self.session.commit()
+        return True
+
+
+============================================================
+ARCHIVO: ./identity/identity_manager.py
+============================================================
+
+from faker import Faker
+
+fake = Faker()
+
+class IdentityGenerator:
+    def generate_profile(self) -> dict:
+        return {
+            "first_name": fake.first_name(),
+            "last_name": fake.last_name(),
+            "email": fake.email(),
+            "username": fake.user_name(),
+            "user_agent": fake.user_agent(),
+            "locale": "es_DO",
+        }
+
+
+============================================================
+ARCHIVO: ./core/humanizer.py
+============================================================
+
+from __future__ import annotations
+import random
+from dataclasses import dataclass
+
+
+@dataclass
+class HumanizeConfig:
+    humanize: bool = True
+    media_type: str = "video"  # "video" | "audio"
+
+
+def gaussian_delay(mu: float, sigma: float, min_delay: float = 0.05) -> float:
+    """Retardo gaussiano no negativo (clamp inferior)."""
+    value = random.gauss(mu, sigma)
+    return max(min_delay, value)
+
+
+def organic_pause(media_type: str) -> float:
+    """Pausa orgánica según tipo de medio."""
+    if media_type == "video":
+        return gaussian_delay(mu=4.5, sigma=1.2)
+    if media_type == "audio":
+        return gaussian_delay(mu=8.0, sigma=2.5)
+    return gaussian_delay(mu=2.0, sigma=0.8)
+
+
+def cubic_bezier_point(t: float, p0, p1, p2, p3) -> tuple[int, int]:
+    """Punto en curva de Bézier cúbica para t ∈ [0, 1]."""
+    u = 1 - t
+    x = u**3 * p0[0] + 3 * u**2 * t * p1[0] + 3 * u * t**2 * p2[0] + t**3 * p3[0]
+    y = u**3 * p0[1] + 3 * u**2 * t * p1[1] + 3 * u * t**2 * p2[1] + t**3 * p3[1]
+    return int(x), int(y)
+
+
+def bezier_segments(start, end, segments: int = 12) -> list[tuple[int, int]]:
+    """
+    Genera puntos intermedios aproximando una curva cúbica entre start y end.
+    Los puntos de control se desplazan aleatoriamente (no colineales) para
+    evitar trayectorias rectilíneas.
+    """
+    mid_x = (start[0] + end[0]) // 2 + random.randint(-80, 80)
+    mid_y = (start[1] + end[1]) // 2 + random.randint(-80, 80)
+    p1 = (mid_x, mid_y)
+    p2 = (mid_x + random.randint(-40, 40), mid_y + random.randint(-40, 40))
+    return [cubic_bezier_point(i / segments, start, p1, p2, end)
+            for i in range(1, segments + 1)]
+
+
+============================================================
+ARCHIVO: ./core/adb_utils.py
+============================================================
+
+from __future__ import annotations
+import subprocess
+
+
+def adb_connect(device_id: str) -> bool:
+    res = subprocess.run(
+        ["adb", "connect", device_id], capture_output=True, text=True
+    )
+    return res.returncode == 0
+
+
+def adb_tap(device_id: str, x: int, y: int) -> None:
+    subprocess.run(
+        ["adb", "-s", device_id, "shell", "input", "tap", str(x), str(y)],
+        check=True,
+    )
+
+
+def adb_swipe(device_id: str, x1: int, y1: int, x2: int, y2: int, duration_ms: int) -> None:
+    subprocess.run(
+        ["adb", "-s", device_id, "shell", "input", "swipe",
+         str(x1), str(y1), str(x2), str(y2), str(duration_ms)],
+        check=True,
+    )
+
+
+def adb_screencap(device_id: str) -> bytes:
+    """Captura binaria (PNG) — no requiere guardar archivo en el nodo."""
+    res = subprocess.run(
+        ["adb", "-s", device_id, "exec-out", "screencap", "-p"],
+        capture_output=True,
+        check=True,
+    )
+    return res.stdout
+
+
+============================================================
+ARCHIVO: ./core/orchestrator.py
+============================================================
+
+from __future__ import annotations
+import logging
+import time
+
+from core.adb_utils import adb_connect, adb_tap, adb_swipe, adb_screencap
+from core.humanizer import (
+    HumanizeConfig,
+    organic_pause,
+    bezier_segments,
+    gaussian_delay,
+)
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("Orchestrator")
+
+
+class OrchestratorEngine:
+    def __init__(self, device_id: str, config: HumanizeConfig | None = None):
+        self.device_id = device_id
+        self.config = config or HumanizeConfig()
+
+    def connect_adb(self) -> bool:
+        ok = adb_connect(self.device_id)
+        logger.info(f"ADB Connect result for {self.device_id}: {ok}")
+        return ok
+
+    # --- Verificación visual ---
+    def visual_precheck(self, expected_marker: str | None = None) -> bool:
+        """
+        Captura pantalla y verifica que hay contenido renderizado antes de actuar.
+        Con integración OpenCV/OCR se puede comparar contra expected_marker;
+        por ahora sólo valida que el frame no esté vacío.
+        """
+        try:
+            frame = adb_screencap(self.device_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"screencap falló en {self.device_id}: {exc}")
+            return False
+        return len(frame) > 1000
+
+    # --- Swipe humanizado ---
+    def _human_swipe(self, x1: int, y1: int, x2: int, y2: int, duration_ms: int) -> None:
+        if not self.config.humanize:
+            adb_swipe(self.device_id, x1, y1, x2, y2, duration_ms)
+            return
+
+        pts = bezier_segments((x1, y1), (x2, y2))
+        prev = (x1, y1)
+        step_ms = max(10, duration_ms // len(pts))
+        for curr in pts:
+            adb_swipe(self.device_id, prev[0], prev[1], curr[0], curr[1], step_ms)
+            prev = curr
+            time.sleep(gaussian_delay(mu=0.03, sigma=0.01))
+
+    # --- Ejecución ---
+    def execute_action(self, action: str, payload: dict) -> None:
+        logger.info(f"[{self.device_id}] action={action} payload={payload}")
+
+        if not self.visual_precheck():
+            logger.warning(f"[{self.device_id}] pantalla no lista, abortando")
+            return
+
+        if action == "tap":
+            x, y = payload.get("x", 0), payload.get("y", 0)
+            if self.config.humanize:
+                time.sleep(gaussian_delay(mu=0.15, sigma=0.05))
+            adb_tap(self.device_id, x, y)
+
+        elif action == "swipe":
+            self._human_swipe(
+                payload.get("x1", 0),
+                payload.get("y1", 0),
+                payload.get("x2", 0),
+                payload.get("y2", 0),
+                payload.get("duration", 300),
+            )
+
+        elif action == "sleep":
+            secs = payload.get("seconds")
+            if secs is None:
+                secs = organic_pause(self.config.media_type) if self.config.humanize else 1
+            time.sleep(float(secs))
+
+        else:
+            logger.warning(f"Acción no soportada: {action}")
+
+
+============================================================
+ARCHIVO: ./core/worker.py
+============================================================
+
+from __future__ import annotations
+import json
+import logging
+from dataclasses import dataclass
+
+import redis.asyncio as aioredis
+
+from core.orchestrator import OrchestratorEngine
+from core.humanizer import HumanizeConfig
+
+logger = logging.getLogger("Worker")
+MAX_RETRIES = 3
+
+
+@dataclass
+class TaskError(Exception):
+    task_id: str
+    reason: str
+    resume_at: str | None = None
+
+
+class ResilientWorker:
+    """
+    Worker por instancia (aislamiento estricto): cada clone usa colas
+    propias `tasks:<clone_id>` y `processing:<clone_id>`.
+    """
+
+    def __init__(self, redis_client: aioredis.Redis, clone_id: str, block_seconds: int = 5):
+        self.redis = redis_client
+        self.clone_id = clone_id
+        self.queue = f"tasks:{clone_id}"
+        self.processing = f"processing:{clone_id}"
+        self.block_seconds = block_seconds
+
+    async def consume_one(self) -> str | None:
+        """BLMOVE atómico y bloqueante (Redis ≥ 6.2)."""
+        return await self.redis.blmove(
+            self.queue, self.processing, self.block_seconds, "RIGHT", "LEFT"
+        )
+
+    async def ack(self, raw: str) -> None:
+        await self.redis.lrem(self.processing, 1, raw)
+
+    async def nack(self, raw: str, error: TaskError) -> None:
+        task = json.loads(raw)
+        task["retries"] = task.get("retries", 0) + 1
+        task["resume_at"] = error.resume_at
+        await self.redis.lrem(self.processing, 1, raw)
+        if task["retries"] > MAX_RETRIES:
+            logger.error(f"[{self.clone_id}] dead-letter task={task.get('task_id')}")
+            await self.redis.lpush(f"dead:{self.clone_id}", json.dumps(task))
+            return
+        await self.redis.lpush(self.queue, json.dumps(task))
+
+    async def process(self, raw: str) -> None:
+        task = json.loads(raw)
+        engine = OrchestratorEngine(
+            device_id=self.clone_id,
+            config=HumanizeConfig(
+                humanize=task.get("humanize", True),
+                media_type=task.get("media_type", "video"),
+            ),
+        )
+        try:
+            if not engine.connect_adb():
+                raise TaskError(task.get("task_id", "?"), "adb_connect_failed")
+            engine.execute_action(task["action"], task.get("payload", {}))
+            await self.ack(raw)
+        except TaskError as exc:
+            await self.nack(raw, exc)
+        except Exception as exc:  # noqa: BLE001
+            await self.nack(raw, TaskError(task.get("task_id", "?"), str(exc)))
+
+    async def run_forever(self) -> None:
+        while True:
+            raw = await self.consume_one()
+            if raw is None:
+                continue
+            await self.process(raw)
+
+
+============================================================
+ARCHIVO: ./tests/test_humanizer.py
+============================================================
+
+from core.humanizer import gaussian_delay, organic_pause, cubic_bezier_point, bezier_segments
+
+
+def test_gaussian_delay_non_negative():
+    for _ in range(200):
+        assert gaussian_delay(mu=0.0, sigma=0.1) >= 0.05
+
+
+def test_organic_pause_audio_longer_than_video():
+    v = [organic_pause("video") for _ in range(200)]
+    a = [organic_pause("audio") for _ in range(200)]
+    assert sum(a) / len(a) > sum(v) / len(v)
+
+
+def test_bezier_endpoints_exact():
+    p0, p3 = (0, 0), (100, 100)
+    assert cubic_bezier_point(0, p0, (30, 40), (70, 60), p3) == p0
+    assert cubic_bezier_point(1, p0, (30, 40), (70, 60), p3) == p3
+
+
+def test_bezier_segments_non_colinear():
+    pts = bezier_segments((0, 0), (200, 200), segments=10)
+    # Al menos un punto debe desviarse de la línea recta y = x
+    assert any(abs(x - y) > 1 for x, y in pts)
+
+
+============================================================
+ARCHIVO: ./tests/test_orchestrator.py
+============================================================
+
+from unittest.mock import patch
+from core.orchestrator import OrchestratorEngine
+from core.humanizer import HumanizeConfig
+
+
+def test_visual_precheck_empty_frame_fails():
+    with patch("core.orchestrator.adb_screencap", return_value=b""):
+        assert OrchestratorEngine("emu-1").visual_precheck() is False
+
+
+def test_visual_precheck_ok():
+    with patch("core.orchestrator.adb_screencap", return_value=b"x" * 5000):
+        assert OrchestratorEngine("emu-1").visual_precheck() is True
+
+
+def test_execute_action_aborts_when_precheck_fails():
+    with patch("core.orchestrator.adb_screencap", return_value=b""), \
+         patch("core.orchestrator.adb_tap") as tap:
+        OrchestratorEngine("emu-1").execute_action("tap", {"x": 10, "y": 10})
+        tap.assert_not_called()
+
+
+def test_tap_calls_adb_when_precheck_ok():
+    with patch("core.orchestrator.adb_screencap", return_value=b"x" * 5000), \
+         patch("core.orchestrator.adb_tap") as tap:
+        OrchestratorEngine("emu-1", HumanizeConfig(humanize=False)).execute_action(
+            "tap", {"x": 10, "y": 20}
+        )
+        tap.assert_called_once_with("emu-1", 10, 20)
+
+
+============================================================
+ARCHIVO: ./tests/test_worker.py
+============================================================
+
+import json
+import fakeredis.aioredis
+import pytest
+
+from core.worker import ResilientWorker, TaskError
+
+
+@pytest.fixture
+async def redis_client():
+    r = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    yield r
+    await r.aclose()
+
+
+async def test_blmove_moves_atomically(redis_client):
+    w = ResilientWorker(redis_client, clone_id="emu-1")
+    await redis_client.lpush(w.queue, '{"task_id":"1"}')
+    raw = await w.consume_one()
+    assert raw is not None
+    assert await redis_client.llen(w.queue) == 0
+    assert await redis_client.llen(w.processing) == 1
+
+
+async def test_nack_requeues_with_resume_at(redis_client):
+    w = ResilientWorker(redis_client, clone_id="emu-1")
+    raw = '{"task_id":"2","retries":0}'
+    await redis_client.lpush(w.processing, raw)
+    await w.nack(raw, TaskError("2", "boom", resume_at="step_3"))
+    requeued = await redis_client.lindex(w.queue, 0)
+    data = json.loads(requeued)
+    assert data["resume_at"] == "step_3"
+    assert data["retries"] == 1
+
+
+async def test_nack_exceeds_retries_goes_to_deadletter(redis_client):
+    w = ResilientWorker(redis_client, clone_id="emu-1")
+    raw = '{"task_id":"3","retries":3}'
+    await redis_client.lpush(w.processing, raw)
+    await w.nack(raw, TaskError("3", "boom"))
+    assert await redis_client.llen(w.queue) == 0
+    assert await redis_client.llen(f"dead:emu-1") == 1
+
+
+============================================================
+ARCHIVO: ./tests/test_target_manager.py
+============================================================
+
+import pytest
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+
+from identity.target_manager import TargetManager, TargetCategory, Base
+
+
+@pytest_asyncio.fixture
+async def session():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    Session = async_sessionmaker(engine, expire_on_commit=False)
+    async with Session() as s:
+        yield s
+    await engine.dispose()
+
+
+async def test_add_and_filter_by_category(session):
+    tm = TargetManager(session)
+    await tm.add_target("https://video/x", TargetCategory.VIDEO, "clip")
+    await tm.add_target("https://audio/y", TargetCategory.AUDIO_STREAM)
+    videos = await tm.get_by_category(TargetCategory.VIDEO)
+    audios = await tm.get_by_category(TargetCategory.AUDIO_STREAM)
+    assert [t.url for t in videos] == ["https://video/x"]
+    assert [t.url for t in audios] == ["https://audio/y"]
+
+
+async def test_deactivate_removes_from_active_list(session):
+    tm = TargetManager(session)
+    t = await tm.add_target("https://video/z", TargetCategory.VIDEO)
+    assert await tm.deactivate(t.id) is True
+    assert await tm.get_by_category(TargetCategory.VIDEO) == []
+
+
+============================================================
+ARCHIVO: ./tests/test_api_clones.py
+============================================================
+
+from unittest.mock import AsyncMock, patch
+from fastapi.testclient import TestClient
+
+from api.main_api import app
+
+
+def test_batch_start_enqueues_per_clone():
+    fake = AsyncMock()
+    with patch("api.routers.clones.get_redis", return_value=fake):
+        with TestClient(app) as client:
+            resp = client.post("/api/v1/clones/batch-start", json={
+                "clone_ids": ["a", "b"],
+                "humanize": True,
+                "media_type": "audio",
+                "action": "sleep",
+                "payload": {},
+            })
+    assert resp.status_code == 200
+    assert resp.json()["queued"] == 2
+    assert fake.lpush.await_count == 2
+
+
+def test_emergency_stop_sets_flags():
+    fake = AsyncMock()
+    with patch("api.routers.clones.get_redis", return_value=fake):
+        with TestClient(app) as client:
+            resp = client.post("/api/v1/clones/emergency-stop", json={
+                "reason": "panic", "clone_ids": ["a", "b"]
+            })
+    assert resp.json()["stopped"] == ["a", "b"]
+    assert fake.set.await_count == 2
+
+
+
+
+============================================================
+ARCHIVO: ./todo_el_codigo_nuevo.txt
+============================================================
+
+=== INICIO DEL VOLCADO DE CONTENIDO DEL REPOSITORIO ===
+
+============================================================
+ARCHIVO: ./.env
+============================================================
+
+POSTGRES_USER=mobil_user
+POSTGRES_PASSWORD=mobil_pass
+POSTGRES_DB=mobil_db
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5433
+
+DATABASE_URL=postgresql+asyncpg://mobil_user:mobil_pass@localhost:5433/mobil_db
+REDIS_URL=redis://localhost:6379/0
+
+
+============================================================
+ARCHIVO: ./docker-compose.yml
+============================================================
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mobil_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: mobil_user
+      POSTGRES_PASSWORD: mobil_pass
+      POSTGRES_DB: mobil_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:alpine
+    container_name: mobil_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
+
+
+============================================================
+ARCHIVO: ./requirements.txt
+============================================================
+
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+redis==5.1.1
+sqlalchemy[asyncio]==2.0.35
+asyncpg==0.30.0
+faker==30.3.0
+pytest==8.3.3
+pytest-asyncio==0.24.0
+fakeredis[aioredis]==2.25.1
+httpx==0.27.2
+
+
+============================================================
+ARCHIVO: ./pytest.ini
+============================================================
+
+[pytest]
+asyncio_mode = auto
+testpaths = tests
+
+
+
+============================================================
+ARCHIVO: ./dump_repo.py
+============================================================
+
+import os
+
+EXCLUDE_DIRS = {'.git', 'node_modules', '__pycache__', 'venv', 'env', 'dist', 'build'}
+EXCLUDE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip', '.exe', '.lock'}
+
+def dump_repository(start_path='.'):
+    print("=== INICIO DEL VOLCADO DE CONTENIDO DEL REPOSITORIO ===")
+    for root, dirs, files in os.walk(start_path):
+        dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
+        for file in files:
+            ext = os.path.splitext(file)[1].lower()
+            if ext in EXCLUDE_EXTENSIONS:
+                continue
+            file_path = os.path.join(root, file)
+            print(f"\n{'='*60}")
+            print(f"ARCHIVO: {file_path}")
+            print(f"{'='*60}\n")
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    print(f.read())
+            except Exception as e:
+                print(f"[No se pudo leer el archivo: {e}]")
+
+if __name__ == "__main__":
+    dump_repository()
+
+
+============================================================
+ARCHIVO: ./todo_el_codigo.txt
+============================================================
+
+=== INICIO DEL VOLCADO DE CONTENIDO DEL REPOSITORIO ===
+
+============================================================
+ARCHIVO: ./.env
+============================================================
+
+POSTGRES_USER=mobil_user
+POSTGRES_PASSWORD=mobil_pass
+POSTGRES_DB=mobil_db
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5433
+
+DATABASE_URL=postgresql+asyncpg://mobil_user:mobil_pass@localhost:5433/mobil_db
+REDIS_URL=redis://localhost:6379/0
+
+
+============================================================
+ARCHIVO: ./docker-compose.yml
+============================================================
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mobil_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: mobil_user
+      POSTGRES_PASSWORD: mobil_pass
+      POSTGRES_DB: mobil_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:alpine
+    container_name: mobil_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
+
+
+============================================================
+ARCHIVO: ./requirements.txt
+============================================================
+
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+redis==5.1.1
+sqlalchemy[asyncio]==2.0.35
+asyncpg==0.30.0
+faker==30.3.0
+pytest==8.3.3
+pytest-asyncio==0.24.0
+fakeredis[aioredis]==2.25.1
+httpx==0.27.2
+
+
+============================================================
+ARCHIVO: ./pytest.ini
+============================================================
+
+[pytest]
+asyncio_mode = auto
+testpaths = tests
+
+
+
+============================================================
+ARCHIVO: ./dump_repo.py
+============================================================
+
+import os
+
+EXCLUDE_DIRS = {'.git', 'node_modules', '__pycache__', 'venv', 'env', 'dist', 'build'}
+EXCLUDE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip', '.exe', '.lock'}
+
+def dump_repository(start_path='.'):
+    print("=== INICIO DEL VOLCADO DE CONTENIDO DEL REPOSITORIO ===")
+    for root, dirs, files in os.walk(start_path):
+        dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
+        for file in files:
+            ext = os.path.splitext(file)[1].lower()
+            if ext in EXCLUDE_EXTENSIONS:
+                continue
+            file_path = os.path.join(root, file)
+            print(f"\n{'='*60}")
+            print(f"ARCHIVO: {file_path}")
+            print(f"{'='*60}\n")
+            try:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    print(f.read())
+            except Exception as e:
+                print(f"[No se pudo leer el archivo: {e}]")
+
+if __name__ == "__main__":
+    dump_repository()
+
+
+============================================================
+ARCHIVO: ./todo_el_codigo.txt
+============================================================
+
+
+
+============================================================
+ARCHIVO: ./api/main_api.py
+============================================================
+
+from __future__ import annotations
+import json
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, HTTPException, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from api.schemas import TaskRequest, TargetCreate
+from api.routers.clones import router as clones_router
+from identity.target_manager import TargetManager, TargetCategory
+from infra.database import get_session
+from infra.redis_client import get_redis
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Asegura schema de targets (en prod: Alembic)
+    from infra.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as session:
+        await TargetManager(session).init_schema()
+    yield
+
+
+app = FastAPI(title="mobil-xml API", version="0.2.0", lifespan=lifespan)
+app.include_router(clones_router)
+
+QUEUE_NAME = "task_queue"  # legacy; los clones usan tasks:<id>
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
+
+@app.post("/tasks", status_code=201)
+async def enqueue_task(task: TaskRequest):
+    try:
+        r = get_redis()
+        await r.lpush(QUEUE_NAME, json.dumps(task.model_dump()))
+        return {"status": "queued", "task": task.model_dump()}
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/targets", status_code=201)
+async def create_target(
+    body: TargetCreate, session: AsyncSession = Depends(get_session)
+):
+    tm = TargetManager(session)
+    target = await tm.add_target(body.url, TargetCategory(body.category), body.label)
+    return {"id": target.id, "url": target.url, "category": target.category.value}
+
+
+@app.get("/api/v1/targets")
+async def list_targets(
+    category: str, session: AsyncSession = Depends(get_session)
+):
+    tm = TargetManager(session)
+    try:
+        cat = TargetCategory(category)
+    except ValueError as exc:
+        raise HTTPException(400, f"categoría inválida: {category}") from exc
+    rows = await tm.get_by_category(cat)
+    return [{"id": t.id, "url": t.url, "label": t.label} for t in rows]
+
+
+============================================================
+ARCHIVO: ./api/schemas.py
+============================================================
+
+from __future__ import annotations
+from typing import Literal
+from pydantic import BaseModel, Field
+
+
+class TaskRequest(BaseModel):
+    device_id: str
+    action: str
+    payload: dict = Field(default_factory=dict)
+    humanize: bool = True
+    media_type: Literal["audio", "video"] = "video"
+
+
+class BatchStartRequest(BaseModel):
+    clone_ids: list[str]
+    humanize: bool = True
+    media_type: Literal["audio", "video"] = "video"
+    action: str = "sleep"
+    payload: dict = Field(default_factory=dict)
+
+
+class EmergencyStopRequest(BaseModel):
+    reason: str = "manual_emergency"
+    clone_ids: list[str] | None = None  # None = todos
+
+
+class TargetCreate(BaseModel):
+    url: str
+    category: Literal["VIDEO", "AUDIO_STREAM", "SOCIAL_PROFILE", "PLAYLIST"]
+    label: str | None = None
+
+
+============================================================
+ARCHIVO: ./api/routers/clones.py
+============================================================
+
+from __future__ import annotations
+import json
+from fastapi import APIRouter
+
+from api.schemas import BatchStartRequest, EmergencyStopRequest
+from infra.redis_client import get_redis
+
+router = APIRouter(prefix="/api/v1/clones", tags=["clones"])
+
+
+@router.post("/batch-start")
+async def batch_start(req: BatchStartRequest):
+    r = get_redis()
+    queued = 0
+    for clone_id in req.clone_ids:
+        task = {
+            "task_id": f"{clone_id}:{queued}",
+            "device_id": clone_id,
+            "action": req.action,
+            "payload": req.payload,
+            "humanize": req.humanize,
+            "media_type": req.media_type,
+            "retries": 0,
+            "resume_at": None,
+        }
+        await r.lpush(f"tasks:{clone_id}", json.dumps(task))
+        queued += 1
+    return {"queued": queued, "humanize": req.humanize, "media_type": req.media_type}
+
+
+@router.post("/emergency-stop")
+async def emergency_stop(req: EmergencyStopRequest):
+    r = get_redis()
+    targets = req.clone_ids or await r.smembers("active_clones")
+    for clone_id in targets:
+        await r.set(f"stop:{clone_id}", req.reason)
+    return {"stopped": list(targets), "reason": req.reason}
+
+
+============================================================
+ARCHIVO: ./infra/database.py
+============================================================
+
+import os
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+asyncpg://mobil_user:mobil_pass@localhost:5432/mobil_db",
+)
+
+engine = create_async_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+async def get_session() -> AsyncSession:
+    async with AsyncSessionLocal() as session:
+        yield session
+
+
+============================================================
+ARCHIVO: ./infra/redis_client.py
+============================================================
+
+import os
+import redis.asyncio as aioredis
+
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+
+_redis: aioredis.Redis | None = None
+
+
+def get_redis() -> aioredis.Redis:
+    global _redis
+    if _redis is None:
+        _redis = aioredis.Redis(
+            host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True
+        )
+    return _redis
+
+
+============================================================
+ARCHIVO: ./infra/docker-compose.yml
+============================================================
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mobil_postgres
+    environment:
+      POSTGRES_DB: mobil_db
+      POSTGRES_USER: mobil_user
+      POSTGRES_PASSWORD: mobil_password
+    ports:
+      - "5432:5432"
+    networks:
+      - mobil_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: mobil_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - mobil_net
+
+  api:
+    build: .
+    container_name: mobil_api
+    command: uvicorn api.main_api:app --host 0.0.0.0 --port 8000
+    environment:
+      REDIS_HOST: redis
+      DATABASE_URL: postgresql+asyncpg://mobil_user:mobil_password@postgres:5432/mobil_db
+    depends_on:
+      - redis
+      - postgres
+    ports:
+      - "8000:8000"
+    networks:
+      - mobil_net
+
+networks:
+  mobil_net:
+    driver: bridge
+
+
+============================================================
+ARCHIVO: ./identity/target_manager.py
+============================================================
+
+from __future__ import annotations
+import enum
+from sqlalchemy import String, Enum, select, Boolean
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class TargetCategory(str, enum.Enum):
+    VIDEO = "VIDEO"
+    AUDIO_STREAM = "AUDIO_STREAM"
+    SOCIAL_PROFILE = "SOCIAL_PROFILE"
+    PLAYLIST = "PLAYLIST"
+
+
+class Target(Base):
+    __tablename__ = "targets"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    url: Mapped[str] = mapped_column(String(2048), unique=True, index=True)
+    category: Mapped[TargetCategory] = mapped_column(Enum(TargetCategory), index=True)
+    label: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class TargetManager:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def init_schema(self) -> None:
+        async with self.session.bind.begin() as conn:  # type: ignore[union-attr]
+            await conn.run_sync(Base.metadata.create_all)
+
+    async def add_target(
+        self, url: str, category: TargetCategory, label: str | None = None
+    ) -> Target:
+        target = Target(url=url, category=category, label=label)
+        self.session.add(target)
+        await self.session.commit()
+        await self.session.refresh(target)
+        return target
+
+    async def get_by_category(self, category: TargetCategory) -> list[Target]:
+        result = await self.session.execute(
+            select(Target).where(Target.category == category, Target.active.is_(True))
+        )
+        return list(result.scalars().all())
+
+    async def deactivate(self, target_id: int) -> bool:
+        target = await self.session.get(Target, target_id)
+        if not target:
+            return False
+        target.active = False
+        await self.session.commit()
+        return True
+
+
+============================================================
+ARCHIVO: ./identity/identity_manager.py
+============================================================
+
+from faker import Faker
+
+fake = Faker()
+
+class IdentityGenerator:
+    def generate_profile(self) -> dict:
+        return {
+            "first_name": fake.first_name(),
+            "last_name": fake.last_name(),
+            "email": fake.email(),
+            "username": fake.user_name(),
+            "user_agent": fake.user_agent(),
+            "locale": "es_DO",
+        }
+
+
+============================================================
+ARCHIVO: ./core/humanizer.py
+============================================================
+
+from __future__ import annotations
+import random
+from dataclasses import dataclass
+
+
+@dataclass
+class HumanizeConfig:
+    humanize: bool = True
+    media_type: str = "video"  # "video" | "audio"
+
+
+def gaussian_delay(mu: float, sigma: float, min_delay: float = 0.05) -> float:
+    """Retardo gaussiano no negativo (clamp inferior)."""
+    value = random.gauss(mu, sigma)
+    return max(min_delay, value)
+
+
+def organic_pause(media_type: str) -> float:
+    """Pausa orgánica según tipo de medio."""
+    if media_type == "video":
+        return gaussian_delay(mu=4.5, sigma=1.2)
+    if media_type == "audio":
+        return gaussian_delay(mu=8.0, sigma=2.5)
+    return gaussian_delay(mu=2.0, sigma=0.8)
+
+
+def cubic_bezier_point(t: float, p0, p1, p2, p3) -> tuple[int, int]:
+    """Punto en curva de Bézier cúbica para t ∈ [0, 1]."""
+    u = 1 - t
+    x = u**3 * p0[0] + 3 * u**2 * t * p1[0] + 3 * u * t**2 * p2[0] + t**3 * p3[0]
+    y = u**3 * p0[1] + 3 * u**2 * t * p1[1] + 3 * u * t**2 * p2[1] + t**3 * p3[1]
+    return int(x), int(y)
+
+
+def bezier_segments(start, end, segments: int = 12) -> list[tuple[int, int]]:
+    """
+    Genera puntos intermedios aproximando una curva cúbica entre start y end.
+    Los puntos de control se desplazan aleatoriamente (no colineales) para
+    evitar trayectorias rectilíneas.
+    """
+    mid_x = (start[0] + end[0]) // 2 + random.randint(-80, 80)
+    mid_y = (start[1] + end[1]) // 2 + random.randint(-80, 80)
+    p1 = (mid_x, mid_y)
+    p2 = (mid_x + random.randint(-40, 40), mid_y + random.randint(-40, 40))
+    return [cubic_bezier_point(i / segments, start, p1, p2, end)
+            for i in range(1, segments + 1)]
+
+
+============================================================
+ARCHIVO: ./core/adb_utils.py
+============================================================
+
+from __future__ import annotations
+import subprocess
+
+
+def adb_connect(device_id: str) -> bool:
+    res = subprocess.run(
+        ["adb", "connect", device_id], capture_output=True, text=True
+    )
+    return res.returncode == 0
+
+
+def adb_tap(device_id: str, x: int, y: int) -> None:
+    subprocess.run(
+        ["adb", "-s", device_id, "shell", "input", "tap", str(x), str(y)],
+        check=True,
+    )
+
+
+def adb_swipe(device_id: str, x1: int, y1: int, x2: int, y2: int, duration_ms: int) -> None:
+    subprocess.run(
+        ["adb", "-s", device_id, "shell", "input", "swipe",
+         str(x1), str(y1), str(x2), str(y2), str(duration_ms)],
+        check=True,
+    )
+
+
+def adb_screencap(device_id: str) -> bytes:
+    """Captura binaria (PNG) — no requiere guardar archivo en el nodo."""
+    res = subprocess.run(
+        ["adb", "-s", device_id, "exec-out", "screencap", "-p"],
+        capture_output=True,
+        check=True,
+    )
+    return res.stdout
+
+
+============================================================
+ARCHIVO: ./core/orchestrator.py
+============================================================
+
+from __future__ import annotations
+import logging
+import time
+
+from core.adb_utils import adb_connect, adb_tap, adb_swipe, adb_screencap
+from core.humanizer import (
+    HumanizeConfig,
+    organic_pause,
+    bezier_segments,
+    gaussian_delay,
+)
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("Orchestrator")
+
+
+class OrchestratorEngine:
+    def __init__(self, device_id: str, config: HumanizeConfig | None = None):
+        self.device_id = device_id
+        self.config = config or HumanizeConfig()
+
+    def connect_adb(self) -> bool:
+        ok = adb_connect(self.device_id)
+        logger.info(f"ADB Connect result for {self.device_id}: {ok}")
+        return ok
+
+    # --- Verificación visual ---
+    def visual_precheck(self, expected_marker: str | None = None) -> bool:
+        """
+        Captura pantalla y verifica que hay contenido renderizado antes de actuar.
+        Con integración OpenCV/OCR se puede comparar contra expected_marker;
+        por ahora sólo valida que el frame no esté vacío.
+        """
+        try:
+            frame = adb_screencap(self.device_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"screencap falló en {self.device_id}: {exc}")
+            return False
+        return len(frame) > 1000
+
+    # --- Swipe humanizado ---
+    def _human_swipe(self, x1: int, y1: int, x2: int, y2: int, duration_ms: int) -> None:
+        if not self.config.humanize:
+            adb_swipe(self.device_id, x1, y1, x2, y2, duration_ms)
+            return
+
+        pts = bezier_segments((x1, y1), (x2, y2))
+        prev = (x1, y1)
+        step_ms = max(10, duration_ms // len(pts))
+        for curr in pts:
+            adb_swipe(self.device_id, prev[0], prev[1], curr[0], curr[1], step_ms)
+            prev = curr
+            time.sleep(gaussian_delay(mu=0.03, sigma=0.01))
+
+    # --- Ejecución ---
+    def execute_action(self, action: str, payload: dict) -> None:
+        logger.info(f"[{self.device_id}] action={action} payload={payload}")
+
+        if not self.visual_precheck():
+            logger.warning(f"[{self.device_id}] pantalla no lista, abortando")
+            return
+
+        if action == "tap":
+            x, y = payload.get("x", 0), payload.get("y", 0)
+            if self.config.humanize:
+                time.sleep(gaussian_delay(mu=0.15, sigma=0.05))
+            adb_tap(self.device_id, x, y)
+
+        elif action == "swipe":
+            self._human_swipe(
+                payload.get("x1", 0),
+                payload.get("y1", 0),
+                payload.get("x2", 0),
+                payload.get("y2", 0),
+                payload.get("duration", 300),
+            )
+
+        elif action == "sleep":
+            secs = payload.get("seconds")
+            if secs is None:
+                secs = organic_pause(self.config.media_type) if self.config.humanize else 1
+            time.sleep(float(secs))
+
+        else:
+            logger.warning(f"Acción no soportada: {action}")
+
+
+============================================================
+ARCHIVO: ./core/worker.py
+============================================================
+
+from __future__ import annotations
+import json
+import logging
+from dataclasses import dataclass
+
+import redis.asyncio as aioredis
+
+from core.orchestrator import OrchestratorEngine
+from core.humanizer import HumanizeConfig
+
+logger = logging.getLogger("Worker")
+MAX_RETRIES = 3
+
+
+@dataclass
+class TaskError(Exception):
+    task_id: str
+    reason: str
+    resume_at: str | None = None
+
+
+class ResilientWorker:
+    """
+    Worker por instancia (aislamiento estricto): cada clone usa colas
+    propias `tasks:<clone_id>` y `processing:<clone_id>`.
+    """
+
+    def __init__(self, redis_client: aioredis.Redis, clone_id: str, block_seconds: int = 5):
+        self.redis = redis_client
+        self.clone_id = clone_id
+        self.queue = f"tasks:{clone_id}"
+        self.processing = f"processing:{clone_id}"
+        self.block_seconds = block_seconds
+
+    async def consume_one(self) -> str | None:
+        """BLMOVE atómico y bloqueante (Redis ≥ 6.2)."""
+        return await self.redis.blmove(
+            self.queue, self.processing, self.block_seconds, "RIGHT", "LEFT"
+        )
+
+    async def ack(self, raw: str) -> None:
+        await self.redis.lrem(self.processing, 1, raw)
+
+    async def nack(self, raw: str, error: TaskError) -> None:
+        task = json.loads(raw)
+        task["retries"] = task.get("retries", 0) + 1
+        task["resume_at"] = error.resume_at
+        await self.redis.lrem(self.processing, 1, raw)
+        if task["retries"] > MAX_RETRIES:
+            logger.error(f"[{self.clone_id}] dead-letter task={task.get('task_id')}")
+            await self.redis.lpush(f"dead:{self.clone_id}", json.dumps(task))
+            return
+        await self.redis.lpush(self.queue, json.dumps(task))
+
+    async def process(self, raw: str) -> None:
+        task = json.loads(raw)
+        engine = OrchestratorEngine(
+            device_id=self.clone_id,
+            config=HumanizeConfig(
+                humanize=task.get("humanize", True),
+                media_type=task.get("media_type", "video"),
+            ),
+        )
+        try:
+            if not engine.connect_adb():
+                raise TaskError(task.get("task_id", "?"), "adb_connect_failed")
+            engine.execute_action(task["action"], task.get("payload", {}))
+            await self.ack(raw)
+        except TaskError as exc:
+            await self.nack(raw, exc)
+        except Exception as exc:  # noqa: BLE001
+            await self.nack(raw, TaskError(task.get("task_id", "?"), str(exc)))
+
+    async def run_forever(self) -> None:
+        while True:
+            raw = await self.consume_one()
+            if raw is None:
+                continue
+            await self.process(raw)
+
+
+============================================================
+ARCHIVO: ./tests/test_humanizer.py
+============================================================
+
+from core.humanizer import gaussian_delay, organic_pause, cubic_bezier_point, bezier_segments
+
+
+def test_gaussian_delay_non_negative():
+    for _ in range(200):
+        assert gaussian_delay(mu=0.0, sigma=0.1) >= 0.05
+
+
+def test_organic_pause_audio_longer_than_video():
+    v = [organic_pause("video") for _ in range(200)]
+    a = [organic_pause("audio") for _ in range(200)]
+    assert sum(a) / len(a) > sum(v) / len(v)
+
+
+def test_bezier_endpoints_exact():
+    p0, p3 = (0, 0), (100, 100)
+    assert cubic_bezier_point(0, p0, (30, 40), (70, 60), p3) == p0
+    assert cubic_bezier_point(1, p0, (30, 40), (70, 60), p3) == p3
+
+
+def test_bezier_segments_non_colinear():
+    pts = bezier_segments((0, 0), (200, 200), segments=10)
+    # Al menos un punto debe desviarse de la línea recta y = x
+    assert any(abs(x - y) > 1 for x, y in pts)
+
+
+============================================================
+ARCHIVO: ./tests/test_orchestrator.py
+============================================================
+
+from unittest.mock import patch
+from core.orchestrator import OrchestratorEngine
+from core.humanizer import HumanizeConfig
+
+
+def test_visual_precheck_empty_frame_fails():
+    with patch("core.orchestrator.adb_screencap", return_value=b""):
+        assert OrchestratorEngine("emu-1").visual_precheck() is False
+
+
+def test_visual_precheck_ok():
+    with patch("core.orchestrator.adb_screencap", return_value=b"x" * 5000):
+        assert OrchestratorEngine("emu-1").visual_precheck() is True
+
+
+def test_execute_action_aborts_when_precheck_fails():
+    with patch("core.orchestrator.adb_screencap", return_value=b""), \
+         patch("core.orchestrator.adb_tap") as tap:
+        OrchestratorEngine("emu-1").execute_action("tap", {"x": 10, "y": 10})
+        tap.assert_not_called()
+
+
+def test_tap_calls_adb_when_precheck_ok():
+    with patch("core.orchestrator.adb_screencap", return_value=b"x" * 5000), \
+         patch("core.orchestrator.adb_tap") as tap:
+        OrchestratorEngine("emu-1", HumanizeConfig(humanize=False)).execute_action(
+            "tap", {"x": 10, "y": 20}
+        )
+        tap.assert_called_once_with("emu-1", 10, 20)
+
+
+============================================================
+ARCHIVO: ./tests/test_worker.py
+============================================================
+
+import json
+import fakeredis.aioredis
+import pytest
+
+from core.worker import ResilientWorker, TaskError
+
+
+@pytest.fixture
+async def redis_client():
+    r = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    yield r
+    await r.aclose()
+
+
+async def test_blmove_moves_atomically(redis_client):
+    w = ResilientWorker(redis_client, clone_id="emu-1")
+    await redis_client.lpush(w.queue, '{"task_id":"1"}')
+    raw = await w.consume_one()
+    assert raw is not None
+    assert await redis_client.llen(w.queue) == 0
+    assert await redis_client.llen(w.processing) == 1
+
+
+async def test_nack_requeues_with_resume_at(redis_client):
+    w = ResilientWorker(redis_client, clone_id="emu-1")
+    raw = '{"task_id":"2","retries":0}'
+    await redis_client.lpush(w.processing, raw)
+    await w.nack(raw, TaskError("2", "boom", resume_at="step_3"))
+    requeued = await redis_client.lindex(w.queue, 0)
+    data = json.loads(requeued)
+    assert data["resume_at"] == "step_3"
+    assert data["retries"] == 1
+
+
+async def test_nack_exceeds_retries_goes_to_deadletter(redis_client):
+    w = ResilientWorker(redis_client, clone_id="emu-1")
+    raw = '{"task_id":"3","retries":3}'
+    await redis_client.lpush(w.processing, raw)
+    await w.nack(raw, TaskError("3", "boom"))
+    assert await redis_client.llen(w.queue) == 0
+    assert await redis_client.llen(f"dead:emu-1") == 1
+
+
+============================================================
+ARCHIVO: ./tests/test_target_manager.py
+============================================================
+
+import pytest
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+
+from identity.target_manager import TargetManager, TargetCategory, Base
+
+
+@pytest_asyncio.fixture
+async def session():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    Session = async_sessionmaker(engine, expire_on_commit=False)
+    async with Session() as s:
+        yield s
+    await engine.dispose()
+
+
+async def test_add_and_filter_by_category(session):
+    tm = TargetManager(session)
+    await tm.add_target("https://video/x", TargetCategory.VIDEO, "clip")
+    await tm.add_target("https://audio/y", TargetCategory.AUDIO_STREAM)
+    videos = await tm.get_by_category(TargetCategory.VIDEO)
+    audios = await tm.get_by_category(TargetCategory.AUDIO_STREAM)
+    assert [t.url for t in videos] == ["https://video/x"]
+    assert [t.url for t in audios] == ["https://audio/y"]
+
+
+async def test_deactivate_removes_from_active_list(session):
+    tm = TargetManager(session)
+    t = await tm.add_target("https://video/z", TargetCategory.VIDEO)
+    assert await tm.deactivate(t.id) is True
+    assert await tm.get_by_category(TargetCategory.VIDEO) == []
+
+
+============================================================
+ARCHIVO: ./tests/test_api_clones.py
+============================================================
+
+from unittest.mock import AsyncMock, patch
+from fastapi.testclient import TestClient
+
+from api.main_api import app
+
+
+def test_batch_start_enqueues_per_clone():
+    fake = AsyncMock()
+    with patch("api.routers.clones.get_redis", return_value=fake):
+        with TestClient(app) as client:
+            resp = client.post("/api/v1/clones/batch-start", json={
+                "clone_ids": ["a", "b"],
+                "humanize": True,
+                "media_type": "audio",
+                "action": "sleep",
+                "payload": {},
+            })
+    assert resp.status_code == 200
+    assert resp.json()["queued"] == 2
+    assert fake.lpush.await_count == 2
+
+
+def test_emergency_stop_sets_flags():
+    fake = AsyncMock()
+    with patch("api.routers.clones.get_redis", return_value=fake):
+        with TestClient(app) as client:
+            resp = client.post("/api/v1/clones/emergency-stop", json={
+                "reason": "panic", "clone_ids": ["a", "b"]
+            })
+    assert resp.json()["stopped"] == ["a", "b"]
+    assert fake.set.await_count == 2
+
+
+
+
+============================================================
+ARCHIVO: ./api/main_api.py
+============================================================
+
+from __future__ import annotations
+import json
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, HTTPException, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from api.schemas import TaskRequest, TargetCreate
+from api.routers.clones import router as clones_router
+from identity.target_manager import TargetManager, TargetCategory
+from infra.database import get_session
+from infra.redis_client import get_redis
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Asegura schema de targets (en prod: Alembic)
+    from infra.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as session:
+        await TargetManager(session).init_schema()
+    yield
+
+
+app = FastAPI(title="mobil-xml API", version="0.2.0", lifespan=lifespan)
+app.include_router(clones_router)
+
+QUEUE_NAME = "task_queue"  # legacy; los clones usan tasks:<id>
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
+
+@app.post("/tasks", status_code=201)
+async def enqueue_task(task: TaskRequest):
+    try:
+        r = get_redis()
+        await r.lpush(QUEUE_NAME, json.dumps(task.model_dump()))
+        return {"status": "queued", "task": task.model_dump()}
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/targets", status_code=201)
+async def create_target(
+    body: TargetCreate, session: AsyncSession = Depends(get_session)
+):
+    tm = TargetManager(session)
+    target = await tm.add_target(body.url, TargetCategory(body.category), body.label)
+    return {"id": target.id, "url": target.url, "category": target.category.value}
+
+
+@app.get("/api/v1/targets")
+async def list_targets(
+    category: str, session: AsyncSession = Depends(get_session)
+):
+    tm = TargetManager(session)
+    try:
+        cat = TargetCategory(category)
+    except ValueError as exc:
+        raise HTTPException(400, f"categoría inválida: {category}") from exc
+    rows = await tm.get_by_category(cat)
+    return [{"id": t.id, "url": t.url, "label": t.label} for t in rows]
+
+
+============================================================
+ARCHIVO: ./api/schemas.py
+============================================================
+
+from __future__ import annotations
+from typing import Literal
+from pydantic import BaseModel, Field
+
+
+class TaskRequest(BaseModel):
+    device_id: str
+    action: str
+    payload: dict = Field(default_factory=dict)
+    humanize: bool = True
+    media_type: Literal["audio", "video"] = "video"
+
+
+class BatchStartRequest(BaseModel):
+    clone_ids: list[str]
+    humanize: bool = True
+    media_type: Literal["audio", "video"] = "video"
+    action: str = "sleep"
+    payload: dict = Field(default_factory=dict)
+
+
+class EmergencyStopRequest(BaseModel):
+    reason: str = "manual_emergency"
+    clone_ids: list[str] | None = None  # None = todos
+
+
+class TargetCreate(BaseModel):
+    url: str
+    category: Literal["VIDEO", "AUDIO_STREAM", "SOCIAL_PROFILE", "PLAYLIST"]
+    label: str | None = None
+
+
+============================================================
+ARCHIVO: ./api/routers/clones.py
+============================================================
+
+from __future__ import annotations
+import json
+from fastapi import APIRouter
+
+from api.schemas import BatchStartRequest, EmergencyStopRequest
+from infra.redis_client import get_redis
+
+router = APIRouter(prefix="/api/v1/clones", tags=["clones"])
+
+
+@router.post("/batch-start")
+async def batch_start(req: BatchStartRequest):
+    r = get_redis()
+    queued = 0
+    for clone_id in req.clone_ids:
+        task = {
+            "task_id": f"{clone_id}:{queued}",
+            "device_id": clone_id,
+            "action": req.action,
+            "payload": req.payload,
+            "humanize": req.humanize,
+            "media_type": req.media_type,
+            "retries": 0,
+            "resume_at": None,
+        }
+        await r.lpush(f"tasks:{clone_id}", json.dumps(task))
+        queued += 1
+    return {"queued": queued, "humanize": req.humanize, "media_type": req.media_type}
+
+
+@router.post("/emergency-stop")
+async def emergency_stop(req: EmergencyStopRequest):
+    r = get_redis()
+    targets = req.clone_ids or await r.smembers("active_clones")
+    for clone_id in targets:
+        await r.set(f"stop:{clone_id}", req.reason)
+    return {"stopped": list(targets), "reason": req.reason}
+
+
+============================================================
+ARCHIVO: ./infra/database.py
+============================================================
+
+import os
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+asyncpg://mobil_user:mobil_pass@localhost:5432/mobil_db",
+)
+
+engine = create_async_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+async def get_session() -> AsyncSession:
+    async with AsyncSessionLocal() as session:
+        yield session
+
+
+============================================================
+ARCHIVO: ./infra/redis_client.py
+============================================================
+
+import os
+import redis.asyncio as aioredis
+
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+
+_redis: aioredis.Redis | None = None
+
+
+def get_redis() -> aioredis.Redis:
+    global _redis
+    if _redis is None:
+        _redis = aioredis.Redis(
+            host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True
+        )
+    return _redis
+
+
+============================================================
+ARCHIVO: ./infra/docker-compose.yml
+============================================================
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mobil_postgres
+    environment:
+      POSTGRES_DB: mobil_db
+      POSTGRES_USER: mobil_user
+      POSTGRES_PASSWORD: mobil_password
+    ports:
+      - "5432:5432"
+    networks:
+      - mobil_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: mobil_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - mobil_net
+
+  api:
+    build: .
+    container_name: mobil_api
+    command: uvicorn api.main_api:app --host 0.0.0.0 --port 8000
+    environment:
+      REDIS_HOST: redis
+      DATABASE_URL: postgresql+asyncpg://mobil_user:mobil_password@postgres:5432/mobil_db
+    depends_on:
+      - redis
+      - postgres
+    ports:
+      - "8000:8000"
+    networks:
+      - mobil_net
+
+networks:
+  mobil_net:
+    driver: bridge
+
+
+============================================================
+ARCHIVO: ./identity/target_manager.py
+============================================================
+
+from __future__ import annotations
+import enum
+from sqlalchemy import String, Enum, select, Boolean
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class TargetCategory(str, enum.Enum):
+    VIDEO = "VIDEO"
+    AUDIO_STREAM = "AUDIO_STREAM"
+    SOCIAL_PROFILE = "SOCIAL_PROFILE"
+    PLAYLIST = "PLAYLIST"
+
+
+class Target(Base):
+    __tablename__ = "targets"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    url: Mapped[str] = mapped_column(String(2048), unique=True, index=True)
+    category: Mapped[TargetCategory] = mapped_column(Enum(TargetCategory), index=True)
+    label: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class TargetManager:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def init_schema(self) -> None:
+        async with self.session.bind.begin() as conn:  # type: ignore[union-attr]
+            await conn.run_sync(Base.metadata.create_all)
+
+    async def add_target(
+        self, url: str, category: TargetCategory, label: str | None = None
+    ) -> Target:
+        target = Target(url=url, category=category, label=label)
+        self.session.add(target)
+        await self.session.commit()
+        await self.session.refresh(target)
+        return target
+
+    async def get_by_category(self, category: TargetCategory) -> list[Target]:
+        result = await self.session.execute(
+            select(Target).where(Target.category == category, Target.active.is_(True))
+        )
+        return list(result.scalars().all())
+
+    async def deactivate(self, target_id: int) -> bool:
+        target = await self.session.get(Target, target_id)
+        if not target:
+            return False
+        target.active = False
+        await self.session.commit()
+        return True
+
+
+============================================================
+ARCHIVO: ./identity/identity_manager.py
+============================================================
+
+from faker import Faker
+
+fake = Faker()
+
+class IdentityGenerator:
+    def generate_profile(self) -> dict:
+        return {
+            "first_name": fake.first_name(),
+            "last_name": fake.last_name(),
+            "email": fake.email(),
+            "username": fake.user_name(),
+            "user_agent": fake.user_agent(),
+            "locale": "es_DO",
+        }
+
+
+============================================================
+ARCHIVO: ./core/humanizer.py
+============================================================
+
+from __future__ import annotations
+import random
+from dataclasses import dataclass
+
+
+@dataclass
+class HumanizeConfig:
+    humanize: bool = True
+    media_type: str = "video"  # "video" | "audio"
+
+
+def gaussian_delay(mu: float, sigma: float, min_delay: float = 0.05) -> float:
+    """Retardo gaussiano no negativo (clamp inferior)."""
+    value = random.gauss(mu, sigma)
+    return max(min_delay, value)
+
+
+def organic_pause(media_type: str) -> float:
+    """Pausa orgánica según tipo de medio."""
+    if media_type == "video":
+        return gaussian_delay(mu=4.5, sigma=1.2)
+    if media_type == "audio":
+        return gaussian_delay(mu=8.0, sigma=2.5)
+    return gaussian_delay(mu=2.0, sigma=0.8)
+
+
+def cubic_bezier_point(t: float, p0, p1, p2, p3) -> tuple[int, int]:
+    """Punto en curva de Bézier cúbica para t ∈ [0, 1]."""
+    u = 1 - t
+    x = u**3 * p0[0] + 3 * u**2 * t * p1[0] + 3 * u * t**2 * p2[0] + t**3 * p3[0]
+    y = u**3 * p0[1] + 3 * u**2 * t * p1[1] + 3 * u * t**2 * p2[1] + t**3 * p3[1]
+    return int(x), int(y)
+
+
+def bezier_segments(start, end, segments: int = 12) -> list[tuple[int, int]]:
+    """
+    Genera puntos intermedios aproximando una curva cúbica entre start y end.
+    Los puntos de control se desplazan aleatoriamente (no colineales) para
+    evitar trayectorias rectilíneas.
+    """
+    mid_x = (start[0] + end[0]) // 2 + random.randint(-80, 80)
+    mid_y = (start[1] + end[1]) // 2 + random.randint(-80, 80)
+    p1 = (mid_x, mid_y)
+    p2 = (mid_x + random.randint(-40, 40), mid_y + random.randint(-40, 40))
+    return [cubic_bezier_point(i / segments, start, p1, p2, end)
+            for i in range(1, segments + 1)]
+
+
+============================================================
+ARCHIVO: ./core/adb_utils.py
+============================================================
+
+from __future__ import annotations
+import subprocess
+
+
+def adb_connect(device_id: str) -> bool:
+    res = subprocess.run(
+        ["adb", "connect", device_id], capture_output=True, text=True
+    )
+    return res.returncode == 0
+
+
+def adb_tap(device_id: str, x: int, y: int) -> None:
+    subprocess.run(
+        ["adb", "-s", device_id, "shell", "input", "tap", str(x), str(y)],
+        check=True,
+    )
+
+
+def adb_swipe(device_id: str, x1: int, y1: int, x2: int, y2: int, duration_ms: int) -> None:
+    subprocess.run(
+        ["adb", "-s", device_id, "shell", "input", "swipe",
+         str(x1), str(y1), str(x2), str(y2), str(duration_ms)],
+        check=True,
+    )
+
+
+def adb_screencap(device_id: str) -> bytes:
+    """Captura binaria (PNG) — no requiere guardar archivo en el nodo."""
+    res = subprocess.run(
+        ["adb", "-s", device_id, "exec-out", "screencap", "-p"],
+        capture_output=True,
+        check=True,
+    )
+    return res.stdout
+
+
+============================================================
+ARCHIVO: ./core/orchestrator.py
+============================================================
+
+from __future__ import annotations
+import logging
+import time
+
+from core.adb_utils import adb_connect, adb_tap, adb_swipe, adb_screencap
+from core.humanizer import (
+    HumanizeConfig,
+    organic_pause,
+    bezier_segments,
+    gaussian_delay,
+)
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("Orchestrator")
+
+
+class OrchestratorEngine:
+    def __init__(self, device_id: str, config: HumanizeConfig | None = None):
+        self.device_id = device_id
+        self.config = config or HumanizeConfig()
+
+    def connect_adb(self) -> bool:
+        ok = adb_connect(self.device_id)
+        logger.info(f"ADB Connect result for {self.device_id}: {ok}")
+        return ok
+
+    # --- Verificación visual ---
+    def visual_precheck(self, expected_marker: str | None = None) -> bool:
+        """
+        Captura pantalla y verifica que hay contenido renderizado antes de actuar.
+        Con integración OpenCV/OCR se puede comparar contra expected_marker;
+        por ahora sólo valida que el frame no esté vacío.
+        """
+        try:
+            frame = adb_screencap(self.device_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"screencap falló en {self.device_id}: {exc}")
+            return False
+        return len(frame) > 1000
+
+    # --- Swipe humanizado ---
+    def _human_swipe(self, x1: int, y1: int, x2: int, y2: int, duration_ms: int) -> None:
+        if not self.config.humanize:
+            adb_swipe(self.device_id, x1, y1, x2, y2, duration_ms)
+            return
+
+        pts = bezier_segments((x1, y1), (x2, y2))
+        prev = (x1, y1)
+        step_ms = max(10, duration_ms // len(pts))
+        for curr in pts:
+            adb_swipe(self.device_id, prev[0], prev[1], curr[0], curr[1], step_ms)
+            prev = curr
+            time.sleep(gaussian_delay(mu=0.03, sigma=0.01))
+
+    # --- Ejecución ---
+    def execute_action(self, action: str, payload: dict) -> None:
+        logger.info(f"[{self.device_id}] action={action} payload={payload}")
+
+        if not self.visual_precheck():
+            logger.warning(f"[{self.device_id}] pantalla no lista, abortando")
+            return
+
+        if action == "tap":
+            x, y = payload.get("x", 0), payload.get("y", 0)
+            if self.config.humanize:
+                time.sleep(gaussian_delay(mu=0.15, sigma=0.05))
+            adb_tap(self.device_id, x, y)
+
+        elif action == "swipe":
+            self._human_swipe(
+                payload.get("x1", 0),
+                payload.get("y1", 0),
+                payload.get("x2", 0),
+                payload.get("y2", 0),
+                payload.get("duration", 300),
+            )
+
+        elif action == "sleep":
+            secs = payload.get("seconds")
+            if secs is None:
+                secs = organic_pause(self.config.media_type) if self.config.humanize else 1
+            time.sleep(float(secs))
+
+        else:
+            logger.warning(f"Acción no soportada: {action}")
+
+
+============================================================
+ARCHIVO: ./core/worker.py
+============================================================
+
+from __future__ import annotations
+import json
+import logging
+from dataclasses import dataclass
+
+import redis.asyncio as aioredis
+
+from core.orchestrator import OrchestratorEngine
+from core.humanizer import HumanizeConfig
+
+logger = logging.getLogger("Worker")
+MAX_RETRIES = 3
+
+
+@dataclass
+class TaskError(Exception):
+    task_id: str
+    reason: str
+    resume_at: str | None = None
+
+
+class ResilientWorker:
+    """
+    Worker por instancia (aislamiento estricto): cada clone usa colas
+    propias `tasks:<clone_id>` y `processing:<clone_id>`.
+    """
+
+    def __init__(self, redis_client: aioredis.Redis, clone_id: str, block_seconds: int = 5):
+        self.redis = redis_client
+        self.clone_id = clone_id
+        self.queue = f"tasks:{clone_id}"
+        self.processing = f"processing:{clone_id}"
+        self.block_seconds = block_seconds
+
+    async def consume_one(self) -> str | None:
+        """BLMOVE atómico y bloqueante (Redis ≥ 6.2)."""
+        return await self.redis.blmove(
+            self.queue, self.processing, self.block_seconds, "RIGHT", "LEFT"
+        )
+
+    async def ack(self, raw: str) -> None:
+        await self.redis.lrem(self.processing, 1, raw)
+
+    async def nack(self, raw: str, error: TaskError) -> None:
+        task = json.loads(raw)
+        task["retries"] = task.get("retries", 0) + 1
+        task["resume_at"] = error.resume_at
+        await self.redis.lrem(self.processing, 1, raw)
+        if task["retries"] > MAX_RETRIES:
+            logger.error(f"[{self.clone_id}] dead-letter task={task.get('task_id')}")
+            await self.redis.lpush(f"dead:{self.clone_id}", json.dumps(task))
+            return
+        await self.redis.lpush(self.queue, json.dumps(task))
+
+    async def process(self, raw: str) -> None:
+        task = json.loads(raw)
+        engine = OrchestratorEngine(
+            device_id=self.clone_id,
+            config=HumanizeConfig(
+                humanize=task.get("humanize", True),
+                media_type=task.get("media_type", "video"),
+            ),
+        )
+        try:
+            if not engine.connect_adb():
+                raise TaskError(task.get("task_id", "?"), "adb_connect_failed")
+            engine.execute_action(task["action"], task.get("payload", {}))
+            await self.ack(raw)
+        except TaskError as exc:
+            await self.nack(raw, exc)
+        except Exception as exc:  # noqa: BLE001
+            await self.nack(raw, TaskError(task.get("task_id", "?"), str(exc)))
+
+    async def run_forever(self) -> None:
+        while True:
+            raw = await self.consume_one()
+            if raw is None:
+                continue
+            await self.process(raw)
+
+
+============================================================
+ARCHIVO: ./tests/test_humanizer.py
+============================================================
+
+from core.humanizer import gaussian_delay, organic_pause, cubic_bezier_point, bezier_segments
+
+
+def test_gaussian_delay_non_negative():
+    for _ in range(200):
+        assert gaussian_delay(mu=0.0, sigma=0.1) >= 0.05
+
+
+def test_organic_pause_audio_longer_than_video():
+    v = [organic_pause("video") for _ in range(200)]
+    a = [organic_pause("audio") for _ in range(200)]
+    assert sum(a) / len(a) > sum(v) / len(v)
+
+
+def test_bezier_endpoints_exact():
+    p0, p3 = (0, 0), (100, 100)
+    assert cubic_bezier_point(0, p0, (30, 40), (70, 60), p3) == p0
+    assert cubic_bezier_point(1, p0, (30, 40), (70, 60), p3) == p3
+
+
+def test_bezier_segments_non_colinear():
+    pts = bezier_segments((0, 0), (200, 200), segments=10)
+    # Al menos un punto debe desviarse de la línea recta y = x
+    assert any(abs(x - y) > 1 for x, y in pts)
+
+
+============================================================
+ARCHIVO: ./tests/test_orchestrator.py
+============================================================
+
+from unittest.mock import patch
+from core.orchestrator import OrchestratorEngine
+from core.humanizer import HumanizeConfig
+
+
+def test_visual_precheck_empty_frame_fails():
+    with patch("core.orchestrator.adb_screencap", return_value=b""):
+        assert OrchestratorEngine("emu-1").visual_precheck() is False
+
+
+def test_visual_precheck_ok():
+    with patch("core.orchestrator.adb_screencap", return_value=b"x" * 5000):
+        assert OrchestratorEngine("emu-1").visual_precheck() is True
+
+
+def test_execute_action_aborts_when_precheck_fails():
+    with patch("core.orchestrator.adb_screencap", return_value=b""), \
+         patch("core.orchestrator.adb_tap") as tap:
+        OrchestratorEngine("emu-1").execute_action("tap", {"x": 10, "y": 10})
+        tap.assert_not_called()
+
+
+def test_tap_calls_adb_when_precheck_ok():
+    with patch("core.orchestrator.adb_screencap", return_value=b"x" * 5000), \
+         patch("core.orchestrator.adb_tap") as tap:
+        OrchestratorEngine("emu-1", HumanizeConfig(humanize=False)).execute_action(
+            "tap", {"x": 10, "y": 20}
+        )
+        tap.assert_called_once_with("emu-1", 10, 20)
+
+
+============================================================
+ARCHIVO: ./tests/test_worker.py
+============================================================
+
+import json
+import fakeredis.aioredis
+import pytest
+
+from core.worker import ResilientWorker, TaskError
+
+
+@pytest.fixture
+async def redis_client():
+    r = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    yield r
+    await r.aclose()
+
+
+async def test_blmove_moves_atomically(redis_client):
+    w = ResilientWorker(redis_client, clone_id="emu-1")
+    await redis_client.lpush(w.queue, '{"task_id":"1"}')
+    raw = await w.consume_one()
+    assert raw is not None
+    assert await redis_client.llen(w.queue) == 0
+    assert await redis_client.llen(w.processing) == 1
+
+
+async def test_nack_requeues_with_resume_at(redis_client):
+    w = ResilientWorker(redis_client, clone_id="emu-1")
+    raw = '{"task_id":"2","retries":0}'
+    await redis_client.lpush(w.processing, raw)
+    await w.nack(raw, TaskError("2", "boom", resume_at="step_3"))
+    requeued = await redis_client.lindex(w.queue, 0)
+    data = json.loads(requeued)
+    assert data["resume_at"] == "step_3"
+    assert data["retries"] == 1
+
+
+async def test_nack_exceeds_retries_goes_to_deadletter(redis_client):
+    w = ResilientWorker(redis_client, clone_id="emu-1")
+    raw = '{"task_id":"3","retries":3}'
+    await redis_client.lpush(w.processing, raw)
+    await w.nack(raw, TaskError("3", "boom"))
+    assert await redis_client.llen(w.queue) == 0
+    assert await redis_client.llen(f"dead:emu-1") == 1
+
+
+============================================================
+ARCHIVO: ./tests/test_target_manager.py
+============================================================
+
+import pytest
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+
+from identity.target_manager import TargetManager, TargetCategory, Base
+
+
+@pytest_asyncio.fixture
+async def session():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    Session = async_sessionmaker(engine, expire_on_commit=False)
+    async with Session() as s:
+        yield s
+    await engine.dispose()
+
+
+async def test_add_and_filter_by_category(session):
+    tm = TargetManager(session)
+    await tm.add_target("https://video/x", TargetCategory.VIDEO, "clip")
+    await tm.add_target("https://audio/y", TargetCategory.AUDIO_STREAM)
+    videos = await tm.get_by_category(TargetCategory.VIDEO)
+    audios = await tm.get_by_category(TargetCategory.AUDIO_STREAM)
+    assert [t.url for t in videos] == ["https://video/x"]
+    assert [t.url for t in audios] == ["https://audio/y"]
+
+
+async def test_deactivate_removes_from_active_list(session):
+    tm = TargetManager(session)
+    t = await tm.add_target("https://video/z", TargetCategory.VIDEO)
+    assert await tm.deactivate(t.id) is True
+    assert await tm.get_by_category(TargetCategory.VIDEO) == []
+
+
+============================================================
+ARCHIVO: ./tests/test_api_clones.py
+============================================================
+
+from unittest.mock import AsyncMock, patch
+from fastapi.testclient import TestClient
+
+from api.main_api import app
+
+
+def test_batch_start_enqueues_per_clone():
+    fake = AsyncMock()
+    with patch("api.routers.clones.get_redis", return_value=fake):
+        with TestClient(app) as client:
+            resp = client.post("/api/v1/clones/batch-start", json={
+                "clone_ids": ["a", "b"],
+                "humanize": True,
+                "media_type": "audio",
+                "action": "sleep",
+                "payload": {},
+            })
+    assert resp.status_code == 200
+    assert resp.json()["queued"] == 2
+    assert fake.lpush.await_count == 2
+
+
+def test_emergency_stop_sets_flags():
+    fake = AsyncMock()
+    with patch("api.routers.clones.get_redis", return_value=fake):
+        with TestClient(app) as client:
+            resp = client.post("/api/v1/clones/emergency-stop", json={
+                "reason": "panic", "clone_ids": ["a", "b"]
+            })
+    assert resp.json()["stopped"] == ["a", "b"]
+    assert fake.set.await_count == 2
+
+
