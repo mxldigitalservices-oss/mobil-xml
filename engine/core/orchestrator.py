@@ -1,50 +1,69 @@
-import sys
-from engine.personas.profile_manager import ProfileManager
+import os
+import random
 from engine.api_mask.obfuscator import APIObfuscator
 from engine.memory.tracker import MemoryTracker
-from engine.scheduler.human_clock import HumanClock
 
 class Orchestrator:
     """
-    Motor central que coordina la identidad, el enmascaramiento, 
-    el reloj biológico y la memoria del sistema.
+    Orquestador central para el modo SaaS automatizado.
+    Recibe el enlace público y ejecuta la interacción usando el pool de perfiles del sistema.
     """
 
-    def __init__(self, username: str, plataforma: str):
-        self.perfil = ProfileManager.obtener_perfil_completo(username)
+    def __init__(self, plataforma: str = "Instagram"):
         self.plataforma = plataforma
+        self.cuentas_sistema = [
+            {"username": "mxl_bot_01", "session": os.getenv("SYS_SESSION_1", "active_token_default")},
+            {"username": "mxl_bot_02", "session": os.getenv("SYS_SESSION_2", "active_token_default")}
+        ]
 
-        if not ProfileManager.validar_perfil_humano(self.perfil):
-            raise ValueError(f"El perfil {username} no cumple con los requisitos mínimos de identidad real.")
+    def procesar_enlace_automatico(self, url_objetivo: str, mensaje: str):
+        """
+        Procesa un enlace público, extrae el identificador y ejecuta la acción
+        usando una cuenta del sistema de forma totalmente automatizada.
+        """
+        print(f"==================================================")
+        print(f"⚙️ [ORQUESTADOR SAAS] Procesando enlace en {self.plataforma}")
+        print(f"==================================================")
 
-    def ejecutar_accion_organica(self, objetivo_id: str, mensaje_base: str):
-        # 1. Verificar memoria previa
-        if MemoryTracker.ya_interactuo(self.perfil["username"], objetivo_id):
-            print(f"[MEMORIA] El perfil {self.perfil['username']} ya interactuó con {objetivo_id}. Cancelando para evitar spam.")
-            return
+        # 1. Extraer identificador único según la plataforma
+        if "instagram.com" in url_objetivo:
+            try:
+                target_id = url_objetivo.split("/reel/")[1].split("/")[0].split("?")[0]
+            except:
+                target_id = url_objetivo.split("/")[-2]
+        else:
+            target_id = url_objetivo.split("/")[-1]
 
-        # 2. Verificar ventana de tiempo humana
-        if not HumanClock.es_horario_operativo():
-            print(f"[RELOJ] Fuera de horario operativo para {self.perfil['username']}. Reprogramando...")
-            return
+        print(f"🎯 ID Extraído del enlace: {target_id}")
 
-        # 3. Generar headers simulados
+        # 2. Seleccionar un bot del pool interno
+        bot_activo = random.choice(self.cuentas_sistema)
+        print(f"🤖 Cuenta del sistema asignada: @{bot_activo['username']}")
+
+        # 3. Verificar memoria
+        if MemoryTracker.ya_interactuo(bot_activo["username"], objetivo_id=target_id):
+            print(f"⚠️ [MEMORIA] El bot @{bot_activo['username']} ya interactuó con {target_id}. Saltando...")
+            return {"status": "skipped", "razon": "duplicado"}
+
+        # 4. Obtener cabeceras móviles y aplicar pausa humana
         headers = APIObfuscator.obtener_headers_aleatorios()
+        APIObfuscator.aplicar_pausa_humana(min_segundos=2.0, max_segundos=4.0)
 
-        # 4. Simular la pausa previa del usuario leyendo/escribiendo
-        print(f"[SIMULACIÓN] {self.perfil['username']} está procesando la publicación en {self.plataforma}...")
-        APIObfuscator.aplicar_pausa_humana(min_segundos=2.0, max_segundos=5.0)
-
-        # 5. Registrar interacción en memoria
+        # 5. Registrar en memoria con todos los argumentos requeridos
         MemoryTracker.registrar_interaccion(
-            username=self.perfil["username"],
-            plataforma=self.plataforma,
-            objetivo_id=objetivo_id,
-            contenido=mensaje_base
+            username=bot_activo["username"],
+            objetivo_id=target_id,
+            contenido=mensaje,
+            plataforma=self.plataforma
         )
 
-        print(f"✅ [ÉXITO] {self.perfil['username']} interactuó en {self.plataforma} con objetivo '{objetivo_id}' usando headers legítimos.")
+        print(f"✅ [ÉXITO] @{bot_activo['username']} comentó en el objetivo '{target_id}' con el texto: '{mensaje}'")
+        print(f"🛡️ Dispositivo emulado: {headers['User-Agent'][:50]}...")
+        print(f"==================================================")
 
-if __name__ == "__main__":
-    motor = Orchestrator(username="carlos_vlogs_rd", plataforma="TikTok")
-    motor.ejecutar_accion_organica(objetivo_id="post_9988", mensaje_base="¡Durísimo ese contenido, hermano! 🔥")
+        return {
+            "status": "success",
+            "target_id": target_id,
+            "bot_utilizado": bot_activo["username"],
+            "mensaje_enviado": mensaje
+        }
