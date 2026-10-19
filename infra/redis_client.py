@@ -6,7 +6,10 @@ REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 
 _redis: aioredis.Redis | None = None
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> hardening/audit-fixes
 def get_redis() -> aioredis.Redis:
     global _redis
     if _redis is None:

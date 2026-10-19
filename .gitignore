@@ -1,0 +1,22 @@
+# Secretos
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Datos generados
+identity/identities.json
+identity/*.tmp
+
+# SO / editores
+.DS_Store
+.idea/
+.vscode/
+.env

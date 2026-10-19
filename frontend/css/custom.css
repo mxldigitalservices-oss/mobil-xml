@@ -1,0 +1,11 @@
+/* Scrollbar suave para consola de logs */
+#logs-console::-webkit-scrollbar { width: 8px; }
+#logs-console::-webkit-scrollbar-thumb { background: #374151; border-radius: 8px; }
+#logs-console::-webkit-scrollbar-track { background: transparent; }
+
+/* Animación de toast */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.toast { animation: toast-in 180ms ease-out; }

@@ -21,6 +21,20 @@ services:
     networks:
       - mobil_net
 
+<<<<<<< HEAD
+=======
+  mongo:
+    image: mongo:7-alpine
+    container_name: mobil_mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mobil_admin
+      MONGO_INITDB_ROOT_PASSWORD: mobil_password
+    networks:
+      - mobil_net
+
+>>>>>>> hardening/audit-fixes
   api:
     build: .
     container_name: mobil_api
@@ -28,9 +42,17 @@ services:
     environment:
       REDIS_HOST: redis
       DATABASE_URL: postgresql+asyncpg://mobil_user:mobil_password@postgres:5432/mobil_db
+<<<<<<< HEAD
     depends_on:
       - redis
       - postgres
+=======
+      MONGO_URL: mongodb://mobil_admin:mobil_password@mongo:27017/?authSource=admin
+    depends_on:
+      - redis
+      - postgres
+      - mongo
+>>>>>>> hardening/audit-fixes
     ports:
       - "8000:8000"
     networks:

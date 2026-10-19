@@ -1,0 +1,10 @@
+.git
+.gitignore
+.env
+**/.env
+infra/
+tests/
+**/__pycache__
+**/*.pyc
+identity/identities.json
+README.md
